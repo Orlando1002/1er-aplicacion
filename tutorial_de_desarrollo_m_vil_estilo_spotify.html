@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Devify Mobile | Tutorial Completo de Desarrollo Móvil y Control de Versiones</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Fuentes Inter y JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            spotify: {
+              black: '#000000',
+              base: '#121212',
+              card: '#181818',
+              elevated: '#242424',
+              hover: '#282828',
+              green: '#1DB954',
+              greenHover: '#1ed760',
+              text: '#FFFFFF',
+              subtext: '#B3B3B3',
+              muted: '#727272'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Estilos base estilo Spotify */
+    body {
+      background-color: #000000;
+      color: #FFFFFF;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbars minimalistas */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Animaciones suaves de transición entre páginas */
+    .fade-in {
+      animation: fadeIn 0.25s ease-out forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Ecualizador animado para el módulo activo */
+    .eq-bar {
+      display: inline-block;
+      width: 3px;
+      background-color: #1DB954;
+      border-radius: 2px;
+      animation: eqAnim 0.85s ease-in-out infinite alternate;
+    }
+    .eq-bar:nth-child(2) { animation-delay: 0.25s; }
+    .eq-bar:nth-child(3) { animation-delay: 0.5s; }
+
+    @keyframes eqAnim {
+      0% { height: 4px; }
+      100% { height: 14px; }
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col select-none sm:select-auto overflow-hidden">
+
+  <!-- TOAST DE NOTIFICACIÓN (SIN USAR alert()) -->
+  <div id="toast" class="fixed top-5 right-5 z-50 hidden items-center gap-3 bg-spotify-green text-black font-bold px-5 py-3 rounded-full shadow-2xl transition-all duration-300">
+    <i class="fa-solid fa-circle-check text-lg"></i>
+    <span id="toast-msg">Acción completada</span>
+  </div>
+
+  <!-- MODAL REPRODUCTOR DE VIDEO YOUTUBE EN ESPAÑOL CON RESPALDO DIRECTO -->
+  <div id="video-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/85 backdrop-blur-sm p-3 sm:p-6">
+    <div class="bg-spotify-card border border-white/15 rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl fade-in">
+      <!-- Cabecera del Modal -->
+      <div class="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-spotify-elevated border-b border-white/10 gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-full bg-[#FF0000] text-white flex items-center justify-center shrink-0">
+            <i class="fa-brands fa-youtube text-sm"></i>
+          </div>
+          <div class="min-w-0">
+            <h3 id="modal-video-title" class="text-xs sm:text-sm font-extrabold text-white truncate">Videotutorial en Español</h3>
+            <p id="modal-video-channel" class="text-[11px] text-spotify-subtext truncate">Canal Educativo</p>
+          </div>
+        </div>
+        <button onclick="closeVideoModal()" title="Cerrar reproductor" class="w-8 h-8 rounded-full bg-black/50 hover:bg-white/20 text-white flex items-center justify-center transition-colors shrink-0">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Contenedor 16:9 del Iframe -->
+      <div class="relative w-full aspect-video bg-black">
+        <iframe 
+          id="youtube-iframe"
+          class="w-full h-full border-0"
+          src=""
+          title="Reproductor de video de YouTube en español"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen>
+        </iframe>
+      </div>
+
+      <!-- Barra inferior con Fallback directo garantizado -->
+      <div class="px-4 sm:px-6 py-3.5 bg-spotify-base flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/10">
+        <p class="text-xs text-spotify-subtext text-center sm:text-left">
+          <i class="fa-solid fa-circle-info text-spotify-green mr-1"></i>
+          Si tu navegador bloquea el reproductor incrustado, ábrelo directamente en una pestaña de YouTube:
+        </p>
+        <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-center">
+          <button onclick="copyCurrentVideoUrl()" class="px-3.5 py-2 rounded-full bg-spotify-elevated hover:bg-spotify-hover text-white text-xs font-bold border border-white/10 transition-colors">
+            <i class="fa-regular fa-copy mr-1"></i> Copiar enlace
+          </button>
+          <a id="modal-direct-youtube" href="https://www.youtube.com/watch?v=3GymExBkKjE" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-full bg-spotify-green hover:bg-spotify-greenHover text-black text-xs font-extrabold inline-flex items-center gap-1.5 transition-colors">
+            <i class="fa-brands fa-youtube text-sm"></i>
+            <span>Abrir en YouTube</span>
+            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENEDOR PRINCIPAL SUPERIOR (SIDEBAR + ÁREA DE CONTENIDO) -->
+  <div class="flex-1 flex overflow-hidden p-0 sm:p-2 gap-2">
+
+    <!-- OVERLAY MÓVIL PARA SIDEBAR -->
+    <div id="mobile-overlay" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/75 z-30 hidden lg:hidden"></div>
+
+    <!-- BARRA LATERAL IZQUIERDA (TU BIBLIOTECA / PLAYLISTS POR MÓDULO) -->
+    <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-40 w-72 sm:w-80 bg-black lg:bg-transparent flex flex-col gap-2 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out p-2 lg:p-0">
+      
+      <!-- Bloque Superior: Marca y Navegación Principal -->
+      <div class="bg-spotify-base rounded-xl p-4 flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <button onclick="navigateTo('home')" class="flex items-center gap-3 text-left group focus:outline-none">
+            <div class="w-10 h-10 rounded-full bg-spotify-green flex items-center justify-center text-black shadow-lg group-hover:scale-105 transition-transform">
+              <i class="fa-solid fa-mobile-screen-button text-xl"></i>
+            </div>
+            <div>
+              <span class="font-black text-lg tracking-tight text-white block leading-none">Devify<span class="text-spotify-green">Mobile</span></span>
+              <span class="text-[11px] text-spotify-subtext font-medium">Actividad 12112026</span>
+            </div>
+          </button>
+          <button onclick="toggleSidebar(false)" class="lg:hidden text-spotify-subtext hover:text-white p-2 rounded-lg">
+            <i class="fa-solid fa-xmark text-xl"></i>
+          </button>
+        </div>
+
+        <nav class="flex flex-col gap-1 mt-1">
+          <button onclick="navigateTo('home')" id="nav-home" class="nav-item flex items-center gap-4 px-3 py-2.5 rounded-lg font-bold text-sm transition-colors text-white bg-spotify-hover">
+            <i class="fa-solid fa-house text-lg w-5 text-center"></i>
+            <span>Inicio / Resumen</span>
+          </button>
+          <button onclick="focusSearch()" class="flex items-center gap-4 px-3 py-2.5 rounded-lg font-bold text-sm transition-colors text-spotify-subtext hover:text-white hover:bg-spotify-elevated">
+            <i class="fa-solid fa-magnifying-glass text-lg w-5 text-center"></i>
+            <span>Buscar en el temario</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Bloque Inferior: Tu Biblioteca (Temario por páginas) -->
+      <div class="bg-spotify-base rounded-xl flex-1 flex flex-col overflow-hidden">
+        <div class="p-4 pb-2">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2.5 text-spotify-subtext font-bold text-sm">
+              <i class="fa-solid fa-layer-group text-lg"></i>
+              <span>Tu Biblioteca</span>
+            </div>
+            <span id="completed-badge" class="text-xs bg-spotify-elevated text-spotify-green font-semibold px-2.5 py-1 rounded-full">0 / 7 leídos</span>
+          </div>
+
+          <!-- Chips de filtro por categoría -->
+          <div class="flex gap-1.5 overflow-x-auto pb-2 no-scrollbar">
+            <button onclick="filterSidebar('all', this)" class="filter-chip active px-3 py-1 rounded-full text-xs font-semibold bg-white text-black transition-colors whitespace-nowrap">Todos</button>
+            <button onclick="filterSidebar('fundamentos', this)" class="filter-chip px-3 py-1 rounded-full text-xs font-semibold bg-spotify-elevated text-white hover:bg-spotify-hover transition-colors whitespace-nowrap">Fundamentos</button>
+            <button onclick="filterSidebar('datos', this)" class="filter-chip px-3 py-1 rounded-full text-xs font-semibold bg-spotify-elevated text-white hover:bg-spotify-hover transition-colors whitespace-nowrap">Datos y Cloud</button>
+            <button onclick="filterSidebar('hardware', this)" class="filter-chip px-3 py-1 rounded-full text-xs font-semibold bg-spotify-elevated text-white hover:bg-spotify-hover transition-colors whitespace-nowrap">Hardware y UI</button>
+          </div>
+        </div>
+
+        <!-- Lista scrolleable de módulos -->
+        <div id="sidebar-list" class="flex-1 overflow-y-auto px-2 pb-4 space-y-1">
+          <!-- Generado dinámicamente -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- CONTENEDOR PRINCIPAL DE LECTURA (DERECHA) -->
+    <main id="main-scroll" class="flex-1 bg-spotify-base sm:rounded-xl overflow-y-auto relative flex flex-col">
+      
+      <!-- Barra Superior Sticky (Navegación Atrás/Adelante, Breadcrumbs y Buscador) -->
+      <header id="top-header" class="sticky top-0 z-20 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 bg-spotify-base/90 backdrop-blur-md border-b border-white/5 transition-colors">
+        <div class="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <!-- Botón hamburguesa móvil -->
+          <button onclick="toggleSidebar(true)" class="lg:hidden w-9 h-9 rounded-full bg-black/60 hover:bg-spotify-hover flex items-center justify-center text-white shrink-0">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+
+          <!-- Flechas Atrás / Adelante estilo Spotify -->
+          <div class="hidden sm:flex items-center gap-2 shrink-0">
+            <button onclick="prevTopic()" title="Tema anterior" class="w-8 h-8 rounded-full bg-black/70 hover:bg-spotify-hover text-white flex items-center justify-center transition-colors">
+              <i class="fa-solid fa-chevron-left text-xs"></i>
+            </button>
+            <button onclick="nextTopic()" title="Siguiente tema" class="w-8 h-8 rounded-full bg-black/70 hover:bg-spotify-hover text-white flex items-center justify-center transition-colors">
+              <i class="fa-solid fa-chevron-right text-xs"></i>
+            </button>
+          </div>
+
+          <!-- Breadcrumbs de ubicación actual -->
+          <nav aria-label="Breadcrumb" class="hidden xl:flex items-center gap-1.5 text-xs text-spotify-subtext shrink-0 bg-black/40 px-3 py-1.5 rounded-full border border-white/5">
+            <button onclick="navigateTo('home')" class="hover:text-white font-semibold">Inicio</button>
+            <i class="fa-solid fa-chevron-right text-[9px]"></i>
+            <span id="breadcrumb-current" class="text-white font-bold truncate max-w-[160px]">Portada</span>
+          </nav>
+
+          <!-- Buscador instantáneo -->
+          <div class="relative flex-1 max-w-md">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-spotify-subtext text-sm"></i>
+            <input 
+              id="global-search" 
+              type="text" 
+              placeholder="¿Qué tema quieres leer? (Git, SQLite, Sensores, JWT...)" 
+              oninput="handleSearch(this.value)"
+              class="w-full bg-spotify-elevated hover:bg-spotify-hover focus:bg-spotify-hover text-white placeholder-spotify-subtext text-xs sm:text-sm pl-10 pr-8 py-2 rounded-full border border-transparent focus:border-white/30 focus:outline-none transition-all"
+            />
+            <button id="clear-search" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-spotify-subtext hover:text-white">
+              <i class="fa-solid fa-circle-xmark text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Acciones rápidas superiores -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="mark-read-btn" onclick="toggleReadCurrent()" class="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border border-white/20 hover:border-white hover:scale-105 transition-all">
+            <i class="fa-regular fa-circle-check"></i>
+            <span>Marcar leído</span>
+          </button>
+          <div class="w-8 h-8 rounded-full bg-spotify-green text-black font-extrabold text-xs flex items-center justify-center shadow" title="Desarrollo Móvil">
+            DM
+          </div>
+        </div>
+      </header>
+
+      <!-- Panel de Resultados de Búsqueda -->
+      <div id="search-results-panel" class="hidden p-4 sm:p-8 fade-in">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl sm:text-2xl font-extrabold">Resultados de búsqueda</h2>
+          <button onclick="clearSearch()" class="text-xs font-bold text-spotify-subtext hover:text-white underline">Cerrar búsqueda</button>
+        </div>
+        <div id="search-results-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+
+      <!-- CONTENIDO DINÁMICO DE LA PÁGINA SELECCIONADA -->
+      <div id="page-container" class="flex-1 pb-16">
+        <!-- Se renderiza la portada o el módulo activo -->
+      </div>
+
+    </main>
+  </div>
+
+  <!-- BARRA INFERIOR ESTILO REPRODUCTOR SPOTIFY -->
+  <footer class="h-20 sm:h-24 bg-black border-t border-white/10 px-3 sm:px-6 flex items-center justify-between gap-4 z-30">
+    
+    <!-- Izquierda: Info del módulo activo -->
+    <div class="flex items-center gap-3 w-1/3 min-w-0">
+      <div id="player-cover" class="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-900 flex items-center justify-center text-white shrink-0 shadow-md">
+        <i class="fa-solid fa-graduation-cap text-xl"></i>
+      </div>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <h4 id="player-title" class="text-xs sm:text-sm font-bold text-white truncate">Portada del Curso</h4>
+          <span class="hidden md:inline-block text-[10px] px-1.5 py-0.5 rounded bg-spotify-green/20 text-spotify-green font-bold">ESPAÑOL</span>
+        </div>
+        <p id="player-subtitle" class="text-[11px] sm:text-xs text-spotify-subtext truncate">Selecciona un módulo del menú lateral</p>
+      </div>
+    </div>
+
+    <!-- Centro: Controles de navegación y barra de progreso de lectura -->
+    <div class="flex flex-col items-center justify-center flex-1 max-w-xl">
+      <div class="flex items-center gap-4 sm:gap-6 mb-1.5">
+        <button onclick="prevTopic()" title="Módulo Anterior" class="text-spotify-subtext hover:text-white transition-colors p-1">
+          <i class="fa-solid fa-backward-step text-base sm:text-lg"></i>
+        </button>
+        <button onclick="toggleAutoScroll()" id="play-pause-btn" title="Desplazamiento / Ir arriba" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-black hover:scale-105 active:scale-95 transition-transform flex items-center justify-center shadow-lg">
+          <i class="fa-solid fa-book-open text-sm"></i>
+        </button>
+        <button onclick="nextTopic()" title="Siguiente Módulo" class="text-spotify-subtext hover:text-white transition-colors p-1">
+          <i class="fa-solid fa-forward-step text-base sm:text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Barra de progreso sincronizada con el scroll -->
+      <div class="w-full flex items-center gap-2.5 text-[11px] text-spotify-subtext font-mono">
+        <span id="read-percent">0%</span>
+        <div class="flex-1 h-1.5 bg-white/15 rounded-full overflow-hidden cursor-pointer group" onclick="seekScroll(event)">
+          <div id="read-progress-bar" class="h-full bg-spotify-green group-hover:bg-spotify-greenHover rounded-full transition-all duration-150" style="width: 0%"></div>
+        </div>
+        <span>100%</span>
+      </div>
+    </div>
+
+    <!-- Derecha: Acceso directo al vídeo de YouTube del tema activo -->
+    <div class="w-1/3 flex items-center justify-end gap-2 sm:gap-3">
+      <button onclick="openCurrentTopicVideo()" title="Abrir reproductor embebido" class="hidden sm:inline-flex items-center gap-1.5 bg-spotify-green hover:bg-spotify-greenHover text-black text-xs font-extrabold px-3.5 py-2 rounded-full transition-colors">
+        <i class="fa-solid fa-play text-xs"></i>
+        <span>Ver Vídeo</span>
+      </button>
+      <a id="player-youtube-btn" href="https://www.youtube.com/watch?v=3GymExBkKjE" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 bg-spotify-elevated hover:bg-[#FF0000] text-white text-xs font-bold px-3 sm:px-4 py-2 rounded-full transition-colors border border-white/10 group">
+        <i class="fa-brands fa-youtube text-base text-[#FF0000] group-hover:text-white"></i>
+        <span class="hidden md:inline">YouTube</span>
+      </a>
+    </div>
+  </footer>
+
+  <!-- BASE DE DATOS DE CONTENIDO Y LÓGICA INTERACTIVA -->
+  <script>
+    // =========================================================================
+    // DATOS COMPLETOS DE LOS 7 MÓDULOS Y SUS VIDEOS DE YOUTUBE EN ESPAÑOL
+    // =========================================================================
+    const TOPICS = [
+      {
+        id: 'versiones',
+        number: '01',
+        category: 'fundamentos',
+        categoryLabel: 'Fundamentos & Flujo',
+        title: 'Control de Versiones',
+        shortDesc: 'Sistemas locales, centralizados (SVN) y distribuidos (Git), funcionamiento y rastreo de cambios.',
+        duration: '12 min lectura',
+        gradient: 'from-emerald-600 via-teal-800 to-spotify-base',
+        icon: 'fa-code-branch',
+        videoId: '3GymExBkKjE',
+        youtubeUrl: 'https://www.youtube.com/watch?v=3GymExBkKjE',
+        youtubeTitle: 'Curso COMPLETO de GIT y GITHUB desde CERO para PRINCIPIANTES',
+        youtubeChannel: 'MoureDev by Brais Moure',
+        keywords: ['git', 'svn', 'mercurial', 'commit', 'branch', 'rama', 'merge', 'tags', 'github', 'gitlab', 'bitbucket', 'cvcs', 'dvcs'],
+        render: () => `
+          <div class="space-y-8">
+            <!-- Definición -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <span class="px-3 py-1 rounded-full bg-spotify-green/20 text-spotify-green text-xs font-bold uppercase tracking-wider">Concepto Base</span>
+              <h2 class="text-2xl font-extrabold mt-3 mb-3">¿Qué es el Control de Versiones?</h2>
+              <p class="text-spotify-subtext leading-relaxed">
+                Un <strong class="text-white">Sistema de Control de Versiones (VCS)</strong> es una herramienta de ingeniería de software que registra, administra y audita todos los cambios realizados sobre un conjunto de archivos o código fuente a lo largo del tiempo. Permite recuperar versiones anteriores, comparar modificaciones, identificar quién introdujo cada cambio y facilitar el trabajo colaborativo simultáneo sin sobrescribir el progreso de otros desarrolladores.
+              </p>
+            </section>
+
+            <!-- Tipos de VCS -->
+            <section>
+              <h2 class="text-2xl font-extrabold mb-4">Tipos de Sistemas de Control de Versiones</h2>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-spotify-card hover:bg-spotify-hover transition-colors rounded-2xl p-5 border border-white/5">
+                  <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-4">
+                    <i class="fa-solid fa-laptop-code text-lg"></i>
+                  </div>
+                  <h3 class="text-lg font-bold mb-2">1. Locales (LVCS)</h3>
+                  <p class="text-sm text-spotify-subtext mb-3">
+                    Almacenan las diferencias entre versiones (parches) dentro de una base de datos local en el propio equipo del usuario.
+                  </p>
+                  <span class="text-xs font-mono text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded">Ej: RCS (Revision Control System)</span>
+                </div>
+
+                <div class="bg-spotify-card hover:bg-spotify-hover transition-colors rounded-2xl p-5 border border-white/5">
+                  <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center mb-4">
+                    <i class="fa-solid fa-server text-lg"></i>
+                  </div>
+                  <h3 class="text-lg font-bold mb-2">2. Centralizados (CVCS)</h3>
+                  <p class="text-sm text-spotify-subtext mb-3">
+                    Existe un único servidor central que contiene todos los archivos versionados. Los clientes descargan copias de trabajo de ese nodo maestro.
+                  </p>
+                  <span class="text-xs font-mono text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded">Ej: Subversion (SVN), Perforce, CVS</span>
+                </div>
+
+                <div class="bg-spotify-card hover:bg-spotify-hover transition-colors rounded-2xl p-5 border border-spotify-green/30">
+                  <div class="w-10 h-10 rounded-xl bg-spotify-green/20 text-spotify-green flex items-center justify-center mb-4">
+                    <i class="fa-solid fa-network-wired text-lg"></i>
+                  </div>
+                  <h3 class="text-lg font-bold mb-2">3. Distribuidos (DVCS)</h3>
+                  <p class="text-sm text-spotify-subtext mb-3">
+                    Cada desarrollador clona el repositorio completo, incluyendo todo su historial de cambios. No dependen de un único punto de fallo.
+                  </p>
+                  <span class="text-xs font-mono text-spotify-green bg-spotify-green/10 px-2.5 py-1 rounded">Ej: Git, Mercurial, Bazaar</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- Tabla Comparativa: Características, Ventajas y Desventajas -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5 overflow-x-auto">
+              <h2 class="text-xl font-extrabold mb-4">Características, Ventajas y Desventajas</h2>
+              <table class="w-full text-left border-collapse min-w-[650px]">
+                <thead>
+                  <tr class="border-b border-white/10 text-xs uppercase text-spotify-subtext">
+                    <th class="py-3 px-4">Tipo</th>
+                    <th class="py-3 px-4">Características</th>
+                    <th class="py-3 px-4 text-spotify-green">Ventajas</th>
+                    <th class="py-3 px-4 text-rose-400">Desventajas</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5 text-sm">
+                  <tr class="hover:bg-white/5">
+                    <td class="py-3.5 px-4 font-bold">Local (LVCS)</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Historial guardado en disco local mediante archivos de parches.</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Rápido, simple, sin necesidad de red ni servidores.</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Imposible colaborar en equipo; pérdida total si falla el disco.</td>
+                  </tr>
+                  <tr class="hover:bg-white/5">
+                    <td class="py-3.5 px-4 font-bold">Centralizado (CVCS)</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Servidor único con permisos granulares por carpeta.</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Administración centralizada; todos saben en qué trabaja cada quien.</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Punto único de fallo (si cae el servidor nadie guarda cambios); requiere red constante.</td>
+                  </tr>
+                  <tr class="hover:bg-white/5">
+                    <td class="py-3.5 px-4 font-bold text-spotify-green">Distribuido (DVCS)</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Instantáneas (snapshots) completas locales + sincronización remota (GitHub, GitLab, Bitbucket).</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Trabajo offline ultrarrápido, ramas ligeras, respaldo redundante en cada clon.</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Curva de aprendizaje inicial mayor; repositorios con binarios pesados crecen rápido.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <!-- Funcionamiento y Rastreo -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+                <h3 class="text-xl font-extrabold mb-3 flex items-center gap-2">
+                  <i class="fa-solid fa-gears text-spotify-green"></i>
+                  Funcionamiento Interno (Las 3 Áreas de Git)
+                </h3>
+                <ul class="space-y-3 text-sm text-spotify-subtext">
+                  <li class="flex gap-3">
+                    <span class="w-6 h-6 rounded-full bg-spotify-elevated text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
+                    <div><strong class="text-white">Working Directory (Directorio de trabajo):</strong> Carpeta donde editas los archivos reales de tu app móvil.</div>
+                  </li>
+                  <li class="flex gap-3">
+                    <span class="w-6 h-6 rounded-full bg-spotify-elevated text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
+                    <div><strong class="text-white">Staging Area (Área de preparación):</strong> Zona intermedia donde seleccionas qué cambios exactos irán en la siguiente versión (<code class="text-spotify-green">git add</code>).</div>
+                  </li>
+                  <li class="flex gap-3">
+                    <span class="w-6 h-6 rounded-full bg-spotify-elevated text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
+                    <div><strong class="text-white">Repository (.git):</strong> Base de datos local donde se almacenan permanentemente las instantáneas mediante <em>commits</em> con hash SHA-1.</div>
+                  </li>
+                </ul>
+              </section>
+
+              <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+                <h3 class="text-xl font-extrabold mb-3 flex items-center gap-2">
+                  <i class="fa-solid fa-magnifying-glass-chart text-spotify-green"></i>
+                  Rastreo y Gestión de Cambios
+                </h3>
+                <ul class="space-y-3 text-sm text-spotify-subtext">
+                  <li><strong class="text-white">Ramas (Branches) y Fusión (Merge):</strong> Permiten desarrollar funcionalidades aisladas (<code class="text-spotify-green">feature/login</code>) sin afectar la rama estable (<code class="text-spotify-green">main</code>) y luego integrarlas.</li>
+                  <li><strong class="text-white">Etiquetas (Tags):</strong> Marcan puntos específicos del historial como lanzamientos oficiales (ej. <code class="text-spotify-green">v1.0.0-release</code>).</li>
+                  <li><strong class="text-white">Auditoría (<code>git log</code>, <code>git diff</code>, <code>git blame</code>):</strong> Inspecciona diferencias línea por línea y quién realizó cada modificación.</li>
+                  <li><strong class="text-white">Plataformas Remotas:</strong> <strong class="text-white">GitHub, GitLab y Bitbucket</strong> alojan repositorios en la nube y gestionan revisiones de código (<em>Pull Requests</em>).</li>
+                </ul>
+              </section>
+            </div>
+
+            <!-- Ejemplo práctico con comandos reales -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-extrabold">Ejemplo Práctico: Comandos Reales de Git</h3>
+                <button onclick="copyCode('code-git')" class="text-xs bg-spotify-elevated hover:bg-spotify-green hover:text-black font-bold px-3 py-1.5 rounded-full transition-colors">
+                  <i class="fa-regular fa-copy mr-1"></i> Copiar comandos
+                </button>
+              </div>
+              <pre id="code-git" class="bg-black/80 text-emerald-300 font-mono text-xs sm:text-sm p-4 rounded-xl overflow-x-auto leading-relaxed"># 1. Inicializar repositorio local y enlazar con GitHub / GitLab / Bitbucket
+git init
+git remote add origin https://github.com/equipo/app-movil.git
+
+# 2. Crear y cambiar a una rama de nueva funcionalidad
+git checkout -b feature/autenticacion-jwt
+
+# 3. Preparar archivos (Staging) y confirmar instantánea (Commit)
+git status
+git add app/src/main/java/AuthRepository.kt
+git commit -m "feat(auth): implementa inicio de sesion con JWT"
+
+# 4. Fusionar con main, etiquetar versión (Tag) y subir al remoto
+git checkout main
+git merge feature/autenticacion-jwt
+git tag -a v1.0.0 -m "Primera version estable"
+git push origin main --tags</pre>
+            </section>
+          </div>
+        `
+      },
+      {
+        id: 'persistencia',
+        number: '02',
+        category: 'datos',
+        categoryLabel: 'Datos y Cloud',
+        title: 'Persistencia y Acceso a Datos',
+        shortDesc: 'Archivos, SQLite, ORM (Room/Realm), servicios web REST/GraphQL, autenticación OAuth2/JWT y APIs.',
+        duration: '15 min lectura',
+        gradient: 'from-blue-600 via-indigo-900 to-spotify-base',
+        icon: 'fa-database',
+        videoId: '_P_eTHkVPw0',
+        youtubeUrl: 'https://www.youtube.com/watch?v=_P_eTHkVPw0',
+        youtubeTitle: 'Room para Principiantes en Android con Kotlin | Base de Datos Local en Android Studio',
+        youtubeChannel: 'Carlos Ktx',
+        keywords: ['persistencia', 'sqlite', 'sqliteopenhelper', 'room', 'realm', 'orm', 'sharedpreferences', 'datastore', 'rest', 'graphql', 'oauth2', 'jwt', 'retrofit', 'fetch'],
+        render: () => `
+          <div class="space-y-8">
+            <!-- Definición y Características -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-2xl font-extrabold mb-3">Definición y Características</h2>
+              <p class="text-spotify-subtext leading-relaxed mb-5">
+                La <strong class="text-white">persistencia de datos</strong> en dispositivos móviles es la capacidad de conservar la información generada o descargada por una aplicación más allá de la ejecución en memoria RAM, garantizando su disponibilidad tras cerrar la app o reiniciar el dispositivo.
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <i class="fa-solid fa-shield-halved text-spotify-green mb-1.5"></i>
+                  <h4 class="font-bold text-sm">Durabilidad</h4>
+                  <p class="text-xs text-spotify-subtext mt-1">Una vez confirmada una escritura, los datos permanecen intactos en memoria no volátil ante cierres inesperados o cortes de energía.</p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <i class="fa-solid fa-atom text-spotify-green mb-1.5"></i>
+                  <h4 class="font-bold text-sm">Atomicidad</h4>
+                  <p class="text-xs text-spotify-subtext mt-1">Las operaciones transaccionales se ejecutan como una unidad indivisible ("todo o nada"), evitando estados corruptos o a medias.</p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <i class="fa-solid fa-lock text-spotify-green mb-1.5"></i>
+                  <h4 class="font-bold text-sm">Aislamiento (Sandboxing)</h4>
+                  <p class="text-xs text-spotify-subtext mt-1">Cada aplicación cuenta con su propio espacio privado protegido por el sistema operativo frente a lecturas no autorizadas.</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Formas de persistencia y Tipos de datos -->
+            <section>
+              <h2 class="text-2xl font-extrabold mb-4">Formas de Persistencia y Tipos de Datos Almacenables</h2>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-spotify-card rounded-2xl p-5 border border-white/5 flex flex-col justify-between">
+                  <div>
+                    <span class="text-xs font-bold text-blue-400 uppercase">1. Archivos y Preferencias</span>
+                    <h3 class="text-lg font-bold mt-1 mb-2">Archivos Internos/Externos & Clave-Valor</h3>
+                    <p class="text-sm text-spotify-subtext mb-3">
+                      Almacenamiento interno privado, almacenamiento externo compartido y pares clave-valor (<code class="text-white">SharedPreferences</code> / <code class="text-white">Jetpack DataStore</code> en Android, <code class="text-white">UserDefaults</code> en iOS).
+                    </p>
+                  </div>
+                  <div class="bg-black/40 p-3 rounded-xl text-xs">
+                    <strong class="text-white block mb-1">Tipos de datos almacenables:</strong>
+                    <span class="text-spotify-subtext">Primitivos (Boolean, Int, Float, String) para ajustes de sesión, y archivos binarios o de texto plano (JSON, PDF, caché multimedia).</span>
+                  </div>
+                </div>
+
+                <div class="bg-spotify-card rounded-2xl p-5 border border-white/5 flex flex-col justify-between">
+                  <div>
+                    <span class="text-xs font-bold text-spotify-green uppercase">2. Bases de Datos Locales</span>
+                    <h3 class="text-lg font-bold mt-1 mb-2">Motores Embebidos (SQLite)</h3>
+                    <p class="text-sm text-spotify-subtext mb-3">
+                      Bases de datos relacionales embebidas directamente en el dispositivo (<code class="text-white">SQLite</code>, <code class="text-white">Room</code>, <code class="text-white">Realm</code>). Permiten consultas complejas, índices y funcionamiento <em>Offline-First</em>.
+                    </p>
+                  </div>
+                  <div class="bg-black/40 p-3 rounded-xl text-xs">
+                    <strong class="text-white block mb-1">Tipos de datos almacenables:</strong>
+                    <span class="text-spotify-subtext">Datos estructurados y relacionales (tablas de usuarios, catálogos de productos, historial de pedidos, mensajes locales).</span>
+                  </div>
+                </div>
+
+                <div class="bg-spotify-card rounded-2xl p-5 border border-white/5 flex flex-col justify-between">
+                  <div>
+                    <span class="text-xs font-bold text-purple-400 uppercase">3. Bases de Datos Remotas</span>
+                    <h3 class="text-lg font-bold mt-1 mb-2">Servicios Web REST / GraphQL</h3>
+                    <p class="text-sm text-spotify-subtext mb-3">
+                      Los datos residen en servidores cloud (PostgreSQL, MongoDB, Firestore) y se sincronizan mediante APIs <code class="text-white">REST</code> o <code class="text-white">GraphQL</code> sobre HTTPS.
+                    </p>
+                  </div>
+                  <div class="bg-black/40 p-3 rounded-xl text-xs">
+                    <strong class="text-white block mb-1">Tipos de datos almacenables:</strong>
+                    <span class="text-spotify-subtext">Objetos serializados en JSON/Protocol Buffers, datos multiusuario compartidos en tiempo real y activos multimedia en la nube.</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Mecanismos de control de acceso -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-xl font-extrabold mb-4">Mecanismos de Control de Acceso a Medios Persistentes</h2>
+              <div class="space-y-4">
+                <div class="p-4 rounded-xl bg-spotify-elevated/60 border-l-4 border-blue-400">
+                  <h4 class="font-bold text-white">A. Biblioteca de Clases (I/O Streams)</h4>
+                  <p class="text-sm text-spotify-subtext mt-1">
+                    Clases estándar del SDK como <code class="text-blue-300">FileInputStream</code>, <code class="text-blue-300">FileOutputStream</code>, <code class="text-blue-300">BufferedReader</code> o <code class="text-blue-300">FileManager</code> para manipular flujos de bytes y archivos directamente.
+                  </p>
+                </div>
+                <div class="p-4 rounded-xl bg-spotify-elevated/60 border-l-4 border-amber-400">
+                  <h4 class="font-bold text-white">B. Clases Nativas de SQLite (<code>SQLiteOpenHelper</code>)</h4>
+                  <p class="text-sm text-spotify-subtext mt-1">
+                    API de bajo nivel compuesta por <code class="text-amber-300">SQLiteOpenHelper</code> (gestiona creación y actualización de versiones de la BD), <code class="text-amber-300">SQLiteDatabase</code> (ejecuta sentencias SQL) y <code class="text-amber-300">Cursor</code> (itera sobre filas devueltas).
+                  </p>
+                </div>
+                <div class="p-4 rounded-xl bg-spotify-elevated/60 border-l-4 border-spotify-green">
+                  <h4 class="font-bold text-white">C. Mapeo Relacional de Objetos (ORM: Room / Realm)</h4>
+                  <p class="text-sm text-spotify-subtext mt-1">
+                    Abstracción moderna como <code class="text-spotify-green">Jetpack Room</code> o <code class="text-spotify-green">Realm</code> que mapea tablas SQL a clases del lenguaje, verifica consultas SQL en tiempo de compilación y emite flujos reactivos (<code class="text-white">Flow</code>).
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Autenticación y consumo de servicios web -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-xl font-extrabold mb-3">Proceso de Autenticación (OAuth2 / JWT) y Consumo de APIs (Retrofit / Fetch)</h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-spotify-subtext mb-5">
+                <div class="bg-black/40 p-4 rounded-xl">
+                  <h4 class="text-white font-bold mb-2">1. Autenticación con OAuth 2.0 y JWT</h4>
+                  <ol class="list-decimal list-inside space-y-1.5">
+                    <li>El usuario envía credenciales o autoriza acceso vía <strong class="text-white">HTTPS</strong>.</li>
+                    <li>El servidor emite un <strong class="text-spotify-green">Access Token (JWT)</strong> firmado y un <em>Refresh Token</em>.</li>
+                    <li>La app almacena los tokens de forma cifrada (<code class="text-white">EncryptedSharedPreferences</code> / Keychain).</li>
+                    <li>Un interceptor HTTP adjunta automáticamente <code class="text-emerald-300">Authorization: Bearer &lt;JWT&gt;</code> en cada petición.</li>
+                  </ol>
+                </div>
+                <div class="bg-black/40 p-4 rounded-xl">
+                  <h4 class="text-white font-bold mb-2">2. Consumo de Servicios Web (Retrofit / Fetch)</h4>
+                  <ol class="list-decimal list-inside space-y-1.5">
+                    <li>Se definen endpoints REST (<code class="text-white">@GET</code>, <code class="text-white">@POST</code>) con <strong class="text-white">Retrofit</strong> (nativo) o <strong class="text-white">Fetch / Axios</strong> (multiplataforma).</li>
+                    <li>La llamada se ejecuta de forma asíncrona en segundo plano (<code class="text-white">suspend</code> / <code class="text-white">async-await</code>).</li>
+                    <li>La respuesta JSON se deserializa a objetos de dominio y se guarda en caché local (Room/SQLite).</li>
+                  </ol>
+                </div>
+              </div>
+
+              <!-- Ejemplo de código -->
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold uppercase text-spotify-green">Ejemplo Kotlin: ORM Room + Consumo REST con Retrofit y JWT</span>
+                <button onclick="copyCode('code-persistencia')" class="text-xs bg-spotify-elevated hover:bg-spotify-green hover:text-black font-bold px-3 py-1.5 rounded-full transition-colors">
+                  <i class="fa-regular fa-copy mr-1"></i> Copiar código
+                </button>
+              </div>
+              <pre id="code-persistencia" class="bg-black/80 text-emerald-300 font-mono text-xs sm:text-sm p-4 rounded-xl overflow-x-auto leading-relaxed">// 1. Entidad y DAO con ORM Room
+@Entity(tableName = "cursos")
+data class CursoEntity(
+    @PrimaryKey val id: Int,
+    val titulo: String,
+    val completado: Boolean
+)
+
+@Dao
+interface CursoDao {
+    @Query("SELECT * FROM cursos")
+    fun observarCursos(): Flow&lt;List&lt;CursoEntity&gt;&gt;
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarTodos(lista: List&lt;CursoEntity&gt;)
+}
+
+// 2. Cliente REST con Retrofit y Token JWT
+interface CursosApi {
+    @GET("v1/cursos")
+    suspend fun obtenerCursosRemotos(
+        @Header("Authorization") bearerJwt: String
+    ): List&lt;CursoEntity&gt;
+}</pre>
+            </section>
+          </div>
+        `
+      },
+      {
+        id: 'sensores',
+        number: '03',
+        category: 'hardware',
+        categoryLabel: 'Hardware y UI',
+        title: 'Gestión de Sensores',
+        shortDesc: 'Sensores de movimiento, ambientales y de posición; SensorManager, tasas de muestreo y filtrado.',
+        duration: '10 min lectura',
+        gradient: 'from-amber-600 via-orange-900 to-spotify-base',
+        icon: 'fa-compass',
+        videoId: '9wpXTiEZUHw',
+        youtubeUrl: 'https://www.youtube.com/watch?v=9wpXTiEZUHw',
+        youtubeTitle: 'Sensores en Android Studio - Giroscopio',
+        youtubeChannel: 'IZHAR YAHIR HERNANDEZ PERCASTIGUI',
+        keywords: ['sensores', 'acelerometro', 'giroscopio', 'barometro', 'termometro', 'luz', 'magnetometro', 'proximidad', 'gps', 'sensormanager'],
+        render: () => `
+          <div class="space-y-8">
+            <!-- Definición -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-2xl font-extrabold mb-3">Definición de Sensores Móviles</h2>
+              <p class="text-spotify-subtext leading-relaxed">
+                Los <strong class="text-white">sensores en dispositivos móviles</strong> son componentes de hardware físico (microsistemas electromecánicos o MEMS) o sensores virtuales derivados por software que miden magnitudes físicas del entorno y del movimiento del teléfono, transformándolas en señales eléctricas digitales accesibles mediante APIs del sistema operativo.
+              </p>
+            </section>
+
+            <!-- Tipos de Sensores -->
+            <section>
+              <h2 class="text-2xl font-extrabold mb-4">Tipos de Sensores en Dispositivos Móviles</h2>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-spotify-card rounded-2xl p-5 border border-white/5">
+                  <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-person-running text-lg"></i>
+                  </div>
+                  <h3 class="text-lg font-bold mb-2">1. Sensores de Movimiento</h3>
+                  <p class="text-xs text-spotify-subtext mb-3">Miden aceleración lineal y velocidad rotacional en tres ejes (X, Y, Z).</p>
+                  <ul class="text-sm space-y-1.5 text-spotify-subtext">
+                    <li>• <strong class="text-white">Acelerómetro:</strong> Mide fuerzas de aceleración incluida la gravedad (m/s²).</li>
+                    <li>• <strong class="text-white">Giroscopio:</strong> Mide la velocidad de rotación angular alrededor de cada eje (rad/s).</li>
+                    <li>• <strong class="text-white">Detector de pasos:</strong> Conteo eficiente de actividad física.</li>
+                  </ul>
+                </div>
+
+                <div class="bg-spotify-card rounded-2xl p-5 border border-white/5">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-spotify-green flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-cloud-sun text-lg"></i>
+                  </div>
+                  <h3 class="text-lg font-bold mb-2">2. Sensores Ambientales</h3>
+                  <p class="text-xs text-spotify-subtext mb-3">Monitorizan las propiedades físicas del entorno que rodea al dispositivo.</p>
+                  <ul class="text-sm space-y-1.5 text-spotify-subtext">
+                    <li>• <strong class="text-white">Barómetro:</strong> Mide presión atmosférica (hPa) para calcular altitud.</li>
+                    <li>• <strong class="text-white">Termómetro:</strong> Monitoriza la temperatura ambiente o interna (°C).</li>
+                    <li>• <strong class="text-white">Sensor de Luz Ambiental:</strong> Mide iluminancia (lux) para regular el brillo de pantalla.</li>
+                  </ul>
+                </div>
+
+                <div class="bg-spotify-card rounded-2xl p-5 border border-white/5">
+                  <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-location-crosshairs text-lg"></i>
+                  </div>
+                  <h3 class="text-lg font-bold mb-2">3. Sensores de Posición</h3>
+                  <p class="text-xs text-spotify-subtext mb-3">Determinan la orientación espacial y ubicación geográfica del smartphone.</p>
+                  <ul class="text-sm space-y-1.5 text-spotify-subtext">
+                    <li>• <strong class="text-white">Magnetómetro:</strong> Detecta el campo magnético terrestre (brújula digital, µT).</li>
+                    <li>• <strong class="text-white">Proximidad:</strong> Detecta cercanía de objetos frente al auricular (cm).</li>
+                    <li>• <strong class="text-white">GPS / GNSS:</strong> Triangulación satelital de latitud, longitud y velocidad.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <!-- Proceso de Gestión de Sensores -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-xl font-extrabold mb-4">Proceso de Gestión de Sensores (Habilitación, Obtención y Procesamiento)</h2>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <span class="text-xs font-black text-spotify-green">PASO 1</span>
+                  <h4 class="font-bold text-base mt-1 mb-2">Habilitación y Permisos</h4>
+                  <p class="text-xs text-spotify-subtext leading-relaxed">
+                    Instanciar <code class="text-white">SensorManager</code> (o <code class="text-white">CMMotionManager</code> en iOS), comprobar disponibilidad del hardware (<code class="text-white">getDefaultSensor()</code>) y solicitar permisos en tiempo de ejecución si aplica (ej. <code class="text-white">ACTIVITY_RECOGNITION</code> o <code class="text-white">ACCESS_FINE_LOCATION</code>).
+                  </p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <span class="text-xs font-black text-spotify-green">PASO 2</span>
+                  <h4 class="font-bold text-base mt-1 mb-2">Obtención (Listeners y Muestreo)</h4>
+                  <p class="text-xs text-spotify-subtext leading-relaxed">
+                    Registrar un <code class="text-white">SensorEventListener</code> eligiendo la tasa de muestreo adecuada (<code class="text-white">SENSOR_DELAY_NORMAL</code>, <code class="text-white">UI</code> o <code class="text-white">GAME</code>) para recibir lecturas en <code class="text-white">onSensorChanged()</code> sin agotar la batería.
+                  </p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <span class="text-xs font-black text-spotify-green">PASO 3</span>
+                  <h4 class="font-bold text-base mt-1 mb-2">Procesamiento y Fusión</h4>
+                  <p class="text-xs text-spotify-subtext leading-relaxed">
+                    Aplicar <strong class="text-white">filtros pasa-bajos</strong> para suavizar ruido o <strong class="text-white">fusión de sensores</strong> (combinar acelerómetro + giroscopio + magnetómetro) para obtener orientación precisa, y desregistrar el listener en <code class="text-white">onPause()</code>.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Ejemplo de código -->
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold uppercase text-spotify-green">Ejemplo Kotlin: Habilitación, Filtro Pasa-Bajos y Liberación</span>
+                <button onclick="copyCode('code-sensores')" class="text-xs bg-spotify-elevated hover:bg-spotify-green hover:text-black font-bold px-3 py-1.5 rounded-full transition-colors">
+                  <i class="fa-regular fa-copy mr-1"></i> Copiar código
+                </button>
+              </div>
+              <pre id="code-sensores" class="bg-black/80 text-emerald-300 font-mono text-xs sm:text-sm p-4 rounded-xl overflow-x-auto leading-relaxed">class SensorActivity : AppCompatActivity(), SensorEventListener {
+    private lateinit var sensorManager: SensorManager
+    private var acelerometro: Sensor? = null
+    private val gravedadFiltrada = FloatArray(3)
+    private val alpha = 0.8f // Constante para filtro pasa-bajos
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // 1. Habilitación con SensorManager
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        acelerometro = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 2. Obtención mediante listener y tasa de muestreo UI
+        acelerometro?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+        }
+    }
+
+    override fun onSensorChanged(event: SensorEvent) {
+        // 3. Procesamiento con filtro pasa-bajos para aislar gravedad
+        gravedadFiltrada[0] = alpha * gravedadFiltrada[0] + (1 - alpha) * event.values[0]
+        gravedadFiltrada[1] = alpha * gravedadFiltrada[1] + (1 - alpha) * event.values[1]
+        gravedadFiltrada[2] = alpha * gravedadFiltrada[2] + (1 - alpha) * event.values[2]
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sensorManager.unregisterListener(this) // Evita consumo excesivo de batería
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+}</pre>
+            </section>
+          </div>
+        `
+      },
+      {
+        id: 'multimedia',
+        number: '04',
+        category: 'hardware',
+        categoryLabel: 'Hardware y UI',
+        title: 'Uso de Recursos Multimedia',
+        shortDesc: 'Imágenes raster/vectoriales, audio, video, Lottie, Canvas/OpenGL, estructura de carpetas y Media3.',
+        duration: '11 min lectura',
+        gradient: 'from-pink-600 via-rose-900 to-spotify-base',
+        icon: 'fa-photo-film',
+        videoId: '0lml9LIXXRc',
+        youtubeUrl: 'https://www.youtube.com/watch?v=0lml9LIXXRc',
+        youtubeTitle: 'Android ejemplos - Recursos imágenes y sonido: Pantalla Splash y reproducir sonidos',
+        youtubeChannel: 'Proxit Apps',
+        keywords: ['multimedia', 'audio', 'video', 'imagenes', 'raster', 'vectoriales', 'lottie', 'canvas', 'opengl', 'drawable', 'raw', 'assets', 'mediaplayer', 'exoplayer', 'media3', 'camerax', 'glide', 'coil'],
+        render: () => `
+          <div class="space-y-8">
+            <!-- Definición -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-2xl font-extrabold mb-3">Definición de Recursos Multimedia</h2>
+              <p class="text-spotify-subtext leading-relaxed">
+                Los <strong class="text-white">recursos multimedia</strong> son los activos digitales visuales, sonoros e interactivos (gráficos, pistas de audio, flujos de video, animaciones vectoriales y renderizado dinámico) que una aplicación móvil empaqueta localmente o transmite desde la red para construir experiencias atractivas e intuitivas.
+              </p>
+            </section>
+
+            <!-- Tipos de recursos multimedia -->
+            <section>
+              <h2 class="text-2xl font-extrabold mb-4">Tipos de Recursos Multimedia Aplicables a Programación Móvil</h2>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="bg-spotify-card p-5 rounded-2xl border border-white/5">
+                  <i class="fa-solid fa-image text-pink-400 text-xl mb-2"></i>
+                  <h3 class="font-bold text-base mb-1">1. Imágenes Raster y Vectoriales</h3>
+                  <p class="text-xs text-spotify-subtext"><strong class="text-white">Raster:</strong> WebP, PNG y JPEG para fotografías y texturas. <strong class="text-white">Vectoriales:</strong> SVG y Vector Drawables XML que escalan a cualquier densidad (dpi) sin pixelarse.</p>
+                </div>
+                <div class="bg-spotify-card p-5 rounded-2xl border border-white/5">
+                  <i class="fa-solid fa-music text-spotify-green text-xl mb-2"></i>
+                  <h3 class="font-bold text-base mb-1">2. Audio</h3>
+                  <p class="text-xs text-spotify-subtext">Formatos comprimidos eficientes para música/streaming (<strong class="text-white">AAC, MP3, OGG Opus</strong>) y audio sin pérdida o baja latencia (<strong class="text-white">WAV</strong>) para efectos de interfaz.</p>
+                </div>
+                <div class="bg-spotify-card p-5 rounded-2xl border border-white/5">
+                  <i class="fa-solid fa-film text-blue-400 text-xl mb-2"></i>
+                  <h3 class="font-bold text-base mb-1">3. Video</h3>
+                  <p class="text-xs text-spotify-subtext">Contenedores locales <strong class="text-white">MP4 (códecs H.264/HEVC)</strong> y protocolos de transmisión adaptativa en red <strong class="text-white">HLS (.m3u8)</strong> y <strong class="text-white">DASH</strong>.</p>
+                </div>
+                <div class="bg-spotify-card p-5 rounded-2xl border border-white/5">
+                  <i class="fa-solid fa-wand-magic-sparkles text-amber-400 text-xl mb-2"></i>
+                  <h3 class="font-bold text-base mb-1">4. Animaciones (Lottie y Transiciones)</h3>
+                  <p class="text-xs text-spotify-subtext">Animaciones vectoriales exportadas desde After Effects en JSON (<strong class="text-white">Lottie</strong>), interpolaciones de propiedades y transiciones fluidas entre pantallas.</p>
+                </div>
+                <div class="bg-spotify-card p-5 rounded-2xl border border-white/5 sm:col-span-2">
+                  <i class="fa-solid fa-cubes text-purple-400 text-xl mb-2"></i>
+                  <h3 class="font-bold text-base mb-1">5. Elementos Visuales Dinámicos (Canvas y OpenGL)</h3>
+                  <p class="text-xs text-spotify-subtext">Dibujo procedural 2D en tiempo real mediante <strong class="text-white">Canvas</strong> (gráficas, firmas, pizarras) y renderizado 3D acelerado por GPU mediante <strong class="text-white">OpenGL ES, Vulkan o Metal</strong>.</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Estructura de carpetas y Componentes de Software -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+                <h3 class="text-xl font-extrabold mb-3 flex items-center gap-2">
+                  <i class="fa-solid fa-folder-tree text-spotify-green"></i>
+                  Estructura de Carpetas en Proyectos Móviles
+                </h3>
+                <div class="font-mono text-xs bg-black/70 p-4 rounded-xl space-y-2 text-spotify-subtext">
+                  <div><span class="text-spotify-green font-bold">Android: res/drawable/</span> → Imágenes WebP/PNG y Vector Drawables.</div>
+                  <div><span class="text-spotify-green font-bold">Android: res/raw/</span> → Audio/video crudo accesible por ID (<code class="text-white">R.raw.sonido</code>).</div>
+                  <div><span class="text-spotify-green font-bold">Android: assets/</span> → Archivos binarios, fuentes, JSON Lottie y modelos.</div>
+                  <div><span class="text-blue-400 font-bold">iOS: Assets.xcassets</span> → Catálogo de imágenes @1x/@2x/@3x y colores.</div>
+                  <div><span class="text-cyan-400 font-bold">Flutter: pubspec.yaml + assets/</span> → Carpeta declarada en el manifiesto del paquete.</div>
+                </div>
+              </section>
+
+              <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+                <h3 class="text-xl font-extrabold mb-3 flex items-center gap-2">
+                  <i class="fa-solid fa-compact-disc text-spotify-green"></i>
+                  Componentes de Software Multimedia
+                </h3>
+                <ul class="space-y-2.5 text-sm text-spotify-subtext">
+                  <li><strong class="text-white">MediaPlayer:</strong> API clásica del sistema para reproducción básica de audio y video local.</li>
+                  <li><strong class="text-white">ExoPlayer / Jetpack Media3:</strong> Motor avanzado extensible para streaming adaptativo (HLS/DASH), listas de reproducción y segundo plano.</li>
+                  <li><strong class="text-white">AudioRecord & CameraX:</strong> Captura de audio PCM desde micrófono y gestión moderna de cámara fotográfica/video.</li>
+                  <li><strong class="text-white">Glide / Coil:</strong> Carga asíncrona, decodificación optimizada y caché en memoria/disco de imágenes remotas.</li>
+                </ul>
+              </section>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 'servicios',
+        number: '05',
+        category: 'datos',
+        categoryLabel: 'Datos y Cloud',
+        title: 'Servicios, Notificaciones y Cloud',
+        shortDesc: 'WorkManager, Foreground Services, AlarmManager, FCM, Content Providers y plataformas Cloud.',
+        duration: '14 min lectura',
+        gradient: 'from-violet-600 via-purple-900 to-spotify-base',
+        icon: 'fa-bell',
+        videoId: 'qy1hqa7b_v8',
+        youtubeUrl: 'https://www.youtube.com/watch?v=qy1hqa7b_v8',
+        youtubeTitle: 'Enviar Notificaciones Remotas con Firebase Cloud Messaging (FCM) en Android',
+        youtubeChannel: 'Martin Kiperszmid | Programador',
+        keywords: ['servicios', 'notificaciones', 'workmanager', 'foreground', 'alarmmanager', 'contentprovider', 'fcm', 'firebase', 'amplify', 'supabase', 'cloud'],
+        render: () => `
+          <div class="space-y-8">
+            <!-- Definición y Tareas en segundo plano -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-2xl font-extrabold mb-3">Definición de Servicios y Tareas en Segundo Plano</h2>
+              <p class="text-spotify-subtext leading-relaxed mb-4">
+                Un <strong class="text-white">Servicio</strong> es un componente de aplicación diseñado para ejecutar procesos prolongados sin requerir una interfaz gráfica visible. Las <strong class="text-white">tareas en segundo plano</strong> permiten sincronizar datos, reproducir audio o procesar archivos cuando el usuario cambia de aplicación, respetando las políticas de ahorro energético del sistema:
+              </p>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <h4 class="font-bold text-spotify-green text-sm mb-1">WorkManager</h4>
+                  <p class="text-xs text-spotify-subtext">Solución estándar para tareas diferibles y garantizadas (sobreviven a reinicios del dispositivo y cumplen restricciones de red/batería).</p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <h4 class="font-bold text-blue-400 text-sm mb-1">Foreground Services</h4>
+                  <p class="text-xs text-spotify-subtext">Ejecución inmediata y continua perceptible para el usuario mediante una notificación obligatoria en la barra de estado (ej. música o GPS).</p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <h4 class="font-bold text-purple-400 text-sm mb-1">AlarmManager</h4>
+                  <p class="text-xs text-spotify-subtext">Programa eventos exactos basados en el reloj del sistema incluso cuando el dispositivo está en reposo (alarmas o recordatorios puntuales).</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Tratamiento de Notificaciones -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-xl font-extrabold mb-3">Tratamiento de Notificaciones (Canales, Prioridades, Acciones y FCM)</h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-spotify-subtext">
+                <div>
+                  <h4 class="font-bold text-white mb-1.5">Canales, Prioridades y Acciones</h4>
+                  <p>Las notificaciones se organizan en <strong class="text-white">Canales (NotificationChannels)</strong> con niveles de importancia (Alta, Predeterminada, Baja) que controlan el sonido y alerta emergente (<em>Heads-up</em>). Pueden incluir botones de <strong class="text-white">acción directa</strong> (responder mensaje, pausar pista) mediante <code class="text-emerald-300">PendingIntent</code>.</p>
+                </div>
+                <div>
+                  <h4 class="font-bold text-white mb-1.5">Notificaciones Push con FCM</h4>
+                  <p><strong class="text-spotify-green">Firebase Cloud Messaging (FCM)</strong> permite enviar mensajes remotos desde un servidor hacia dispositivos específicos mediante tokens de registro únicos (<code class="text-white">FirebaseMessagingService</code>), despertando la app incluso si está cerrada.</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Proceso de implementación paso a paso -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-xl font-extrabold mb-4">Proceso de Implementación Paso a Paso</h2>
+              <div class="space-y-4 text-sm">
+                <div class="p-4 rounded-xl bg-black/50 border border-white/5">
+                  <h4 class="font-bold text-amber-400 mb-1">1. Implementación de Content Providers</h4>
+                  <p class="text-spotify-subtext">Heredar de <code class="text-white">ContentProvider</code> → Definir autoridad URI (<code class="text-white">content://com.app.datos/items</code>) → Implementar <code class="text-white">query()</code>, <code class="text-white">insert()</code>, <code class="text-white">update()</code> y <code class="text-white">delete()</code> → Declarar el proveedor en <code class="text-white">AndroidManifest.xml</code> para que otras apps consulten mediante <code class="text-white">ContentResolver</code>.</p>
+                </div>
+
+                <div class="p-4 rounded-xl bg-black/50 border border-white/5">
+                  <h4 class="font-bold text-spotify-green mb-1">2. Implementación de Tareas en Segundo Plano (WorkManager)</h4>
+                  <p class="text-spotify-subtext">Crear subclase de <code class="text-white">CoroutineWorker</code> e implementar <code class="text-white">doWork()</code> → Definir <code class="text-white">Constraints</code> (ej. <code class="text-white">NetworkType.CONNECTED</code>) → Construir <code class="text-white">OneTimeWorkRequestBuilder</code> o <code class="text-white">PeriodicWorkRequestBuilder</code> → Encolar con <code class="text-white">WorkManager.getInstance(ctx).enqueue(request)</code>.</p>
+                </div>
+
+                <div class="p-4 rounded-xl bg-black/50 border border-white/5">
+                  <h4 class="font-bold text-blue-400 mb-1">3. Implementación de Notificaciones</h4>
+                  <p class="text-spotify-subtext">Solicitar permiso <code class="text-white">POST_NOTIFICATIONS</code> → Crear y registrar <code class="text-white">NotificationChannel</code> en <code class="text-white">NotificationManager</code> → Configurar título, texto, ícono y acciones con <code class="text-white">NotificationCompat.Builder</code> → Disparar con <code class="text-white">notify(id, builder.build())</code>.</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Servicios de Cómputo en la Nube -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-xl font-extrabold mb-3">Servicios de Cómputo en la Nube Aplicables a Apps Móviles</h2>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <strong class="text-amber-400 text-sm block mb-1">Google Firebase</strong>
+                  <span class="text-spotify-subtext">Suite MBaaS integral: Cloud Firestore (base NoSQL en tiempo real), Firebase Authentication, Cloud Functions serverless, Cloud Storage y FCM.</span>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <strong class="text-orange-400 text-sm block mb-1">AWS Amplify</strong>
+                  <span class="text-spotify-subtext">Framework cloud de Amazon que conecta apps móviles con Cognito (gestión de identidad), AppSync (APIs GraphQL), S3 y DynamoDB.</span>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <strong class="text-spotify-green text-sm block mb-1">Supabase</strong>
+                  <span class="text-spotify-subtext">Alternativa open-source basada en PostgreSQL con APIs REST/Realtime autogeneradas, autenticación OAuth y almacenamiento de archivos.</span>
+                </div>
+              </div>
+            </section>
+          </div>
+        `
+      },
+      {
+        id: 'librerias',
+        number: '06',
+        category: 'fundamentos',
+        categoryLabel: 'Fundamentos & Flujo',
+        title: 'Librerías y Toolkits Móviles',
+        shortDesc: 'Librería vs Toolkit/SDK, bibliotecas especializadas (Retrofit, Room, Glide, Hilt, Lottie) y tabla comparativa.',
+        duration: '11 min lectura',
+        gradient: 'from-cyan-600 via-sky-900 to-spotify-base',
+        icon: 'fa-toolbox',
+        videoId: 'c1vuyTndhv8',
+        youtubeUrl: 'https://www.youtube.com/watch?v=c1vuyTndhv8',
+        youtubeTitle: 'Flutter vs React Native: ¿Cuál elegir?',
+        youtubeChannel: 'Julio Andres Dev',
+        keywords: ['libreria', 'toolkit', 'sdk', 'retrofit', 'room', 'glide', 'hilt', 'lottie', 'jetpack compose', 'swiftui', 'flutter', 'react native', 'kotlin multiplatform'],
+        render: () => `
+          <div class="space-y-8">
+            <!-- Definición de Librería vs Toolkit/SDK -->
+            <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+                <span class="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-400 text-xs font-bold">Módulo Reutilizable</span>
+                <h2 class="text-2xl font-extrabold mt-3 mb-2">¿Qué es una Librería?</h2>
+                <p class="text-sm text-spotify-subtext leading-relaxed">
+                  Una <strong class="text-white">librería</strong> es un conjunto de clases, funciones y algoritmos empaquetados para resolver una tarea específica (redes, imágenes, inyección de dependencias). En una librería, <strong class="text-cyan-400">el desarrollador conserva el flujo de control</strong> e invoca sus métodos cuando los requiere.
+                </p>
+              </div>
+
+              <div class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+                <span class="px-3 py-1 rounded-full bg-spotify-green/20 text-spotify-green text-xs font-bold">Entorno y UI Integral</span>
+                <h2 class="text-2xl font-extrabold mt-3 mb-2">¿Qué es un Toolkit / SDK?</h2>
+                <p class="text-sm text-spotify-subtext leading-relaxed">
+                  Un <strong class="text-white">toolkit / SDK (Software Development Kit)</strong> es un ecosistema completo de herramientas de compilación, bibliotecas de interfaz gráfica (widgets), motores de renderizado y APIs del sistema que definen la arquitectura y apariencia visual de toda la aplicación móvil.
+                </p>
+              </div>
+            </section>
+
+            <!-- Librerías especializadas -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-xl font-extrabold mb-4">Librerías Especializadas para Aplicaciones Móviles</h2>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <span class="text-xs font-bold text-spotify-green uppercase">Redes y APIs</span>
+                  <h4 class="font-bold text-white mt-1">Retrofit</h4>
+                  <p class="text-xs text-spotify-subtext mt-1">Cliente HTTP seguro en tipos que convierte interfaces REST en llamadas de red asíncronas con interceptores y serialización JSON.</p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <span class="text-xs font-bold text-blue-400 uppercase">Persistencia Local</span>
+                  <h4 class="font-bold text-white mt-1">Room</h4>
+                  <p class="text-xs text-spotify-subtext mt-1">Capa ORM oficial sobre SQLite con verificación de consultas en tiempo de compilación y soporte reactivo con Kotlin Flow.</p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <span class="text-xs font-bold text-pink-400 uppercase">Multimedia e Imágenes</span>
+                  <h4 class="font-bold text-white mt-1">Glide</h4>
+                  <p class="text-xs text-spotify-subtext mt-1">Carga, decodificación, redimensionamiento y caché multinivel de imágenes remotas y GIFs con mínimo impacto en memoria.</p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <span class="text-xs font-bold text-amber-400 uppercase">Arquitectura</span>
+                  <h4 class="font-bold text-white mt-1">Dagger Hilt</h4>
+                  <p class="text-xs text-spotify-subtext mt-1">Inyección de dependencias estándar que gestiona el ciclo de vida de repositorios, ViewModels y clientes de red.</p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl sm:col-span-2">
+                  <span class="text-xs font-bold text-purple-400 uppercase">Animaciones Vectoriales</span>
+                  <h4 class="font-bold text-white mt-1">Lottie</h4>
+                  <p class="text-xs text-spotify-subtext mt-1">Renderiza de forma nativa animaciones complejas exportadas en formato JSON ligero sin penalizar el tamaño del paquete.</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Tabla Comparativa: Nativos vs Multiplataforma -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5 overflow-x-auto">
+              <h2 class="text-xl font-extrabold mb-4">Diferenciación Comparativa: Toolkits Nativos vs. Multiplataforma</h2>
+              <table class="w-full text-left border-collapse min-w-[720px]">
+                <thead>
+                  <tr class="border-b border-white/10 text-xs uppercase text-spotify-subtext">
+                    <th class="py-3 px-4">Toolkit / Framework</th>
+                    <th class="py-3 px-4">Categoría</th>
+                    <th class="py-3 px-4">Lenguaje</th>
+                    <th class="py-3 px-4">Renderizado de UI y Ventajas</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5 text-sm">
+                  <tr class="hover:bg-white/5">
+                    <td class="py-3.5 px-4 font-bold text-spotify-green">Android SDK / Jetpack Compose</td>
+                    <td class="py-3.5 px-4 text-xs font-semibold text-emerald-300">Nativo (Android)</td>
+                    <td class="py-3.5 px-4 font-mono text-xs">Kotlin / Java</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">UI declarativa nativa Material 3; acceso inmediato a todas las APIs de hardware y máximo rendimiento.</td>
+                  </tr>
+                  <tr class="hover:bg-white/5">
+                    <td class="py-3.5 px-4 font-bold text-blue-400">SwiftUI (Apple SDK)</td>
+                    <td class="py-3.5 px-4 text-xs font-semibold text-blue-300">Nativo (iOS)</td>
+                    <td class="py-3.5 px-4 font-mono text-xs">Swift</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Framework declarativo nativo de Apple para iOS/iPadOS/watchOS con integración total a Metal y CoreML.</td>
+                  </tr>
+                  <tr class="hover:bg-white/5">
+                    <td class="py-3.5 px-4 font-bold text-cyan-400">Flutter (Google)</td>
+                    <td class="py-3.5 px-4 text-xs font-semibold text-amber-300">Multiplataforma</td>
+                    <td class="py-3.5 px-4 font-mono text-xs">Dart</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Motor gráfico propio (Impeller/Skia) que dibuja sus propios widgets con consistencia visual exacta en iOS y Android.</td>
+                  </tr>
+                  <tr class="hover:bg-white/5">
+                    <td class="py-3.5 px-4 font-bold text-indigo-400">React Native (Meta)</td>
+                    <td class="py-3.5 px-4 text-xs font-semibold text-amber-300">Multiplataforma</td>
+                    <td class="py-3.5 px-4 font-mono text-xs">TypeScript / JS</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Traduce componentes React a vistas nativas de cada plataforma mediante arquitectura JSI/Fabric y actualizaciones OTA.</td>
+                  </tr>
+                  <tr class="hover:bg-white/5">
+                    <td class="py-3.5 px-4 font-bold text-purple-400">Kotlin Multiplatform (KMP)</td>
+                    <td class="py-3.5 px-4 text-xs font-semibold text-amber-300">Multiplataforma</td>
+                    <td class="py-3.5 px-4 font-mono text-xs">Kotlin</td>
+                    <td class="py-3.5 px-4 text-spotify-subtext">Comparte lógica de negocio (red, persistencia) compilando a nativo iOS/Android, permitiendo UI 100% nativa o Compose Multiplatform.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+          </div>
+        `
+      },
+      {
+        id: 'depuracion',
+        number: '07',
+        category: 'fundamentos',
+        categoryLabel: 'Calidad & Referencias',
+        title: 'Depuración, Seguridad y Referencias',
+        shortDesc: 'Logcat, Android Profiler, Layout Inspector, Breakpoints, ADB, cifrado AES/Keystore, OWASP y APA.',
+        duration: '13 min lectura',
+        gradient: 'from-red-600 via-rose-950 to-spotify-base',
+        icon: 'fa-bug-slash',
+        videoId: 'lomJhZ7PEK4',
+        youtubeUrl: 'https://www.youtube.com/watch?v=lomJhZ7PEK4',
+        youtubeTitle: 'Análisis de seguridad en apps móviles: herramientas y técnicas (Android)',
+        youtubeChannel: 'Ekoparty Security Conference',
+        keywords: ['depuracion', 'debugging', 'seguridad', 'logcat', 'profiler', 'layout inspector', 'breakpoints', 'adb', 'aes', 'keystore', 'pinning', 'proguard', 'r8', 'owasp', 'referencias', 'apa'],
+        render: () => `
+          <div class="space-y-8">
+            <!-- Definiciones -->
+            <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center mb-3">
+                  <i class="fa-solid fa-bug text-lg"></i>
+                </div>
+                <h2 class="text-xl font-extrabold mb-2">¿Qué es la Depuración Móvil?</h2>
+                <p class="text-sm text-spotify-subtext leading-relaxed">
+                  Es el proceso metódico de inspeccionar la ejecución de una aplicación móvil para localizar, diagnosticar y corregir errores lógicos (<em>bugs</em>), fugas de memoria (<em>memory leaks</em>) y problemas de rendimiento antes de su publicación.
+                </p>
+              </div>
+
+              <div class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+                <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mb-3">
+                  <i class="fa-solid fa-shield-halved text-lg"></i>
+                </div>
+                <h2 class="text-xl font-extrabold mb-2">¿Qué es la Seguridad Móvil?</h2>
+                <p class="text-sm text-spotify-subtext leading-relaxed">
+                  Es la disciplina enfocada en blindar el código binario, las comunicaciones en red y el almacenamiento local del dispositivo frente a ingeniería inversa, interceptación de tráfico y accesos no autorizados, siguiendo el estándar <strong class="text-white">OWASP Mobile Top 10</strong>.
+                </p>
+              </div>
+            </section>
+
+            <!-- Herramientas de depuración -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-xl font-extrabold mb-4">Herramientas de Depuración en el Entorno Móvil</h2>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <h4 class="font-bold text-spotify-green mb-1"><i class="fa-solid fa-terminal mr-1.5"></i>Logcat</h4>
+                  <p class="text-xs text-spotify-subtext">Consola en tiempo real que captura registros del sistema, trazas de excepciones (<em>Stack Traces</em>) y logs filtrables por etiqueta y severidad.</p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <h4 class="font-bold text-blue-400 mb-1"><i class="fa-solid fa-chart-line mr-1.5"></i>Android Profiler</h4>
+                  <p class="text-xs text-spotify-subtext">Analiza en vivo el consumo de CPU, asignación de memoria RAM (volcados Heap), tráfico de red y gasto energético de batería.</p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <h4 class="font-bold text-purple-400 mb-1"><i class="fa-solid fa-layer-group mr-1.5"></i>Layout Inspector</h4>
+                  <p class="text-xs text-spotify-subtext">Visualiza la jerarquía de vistas en 3D en tiempo de ejecución para detectar problemas de alineación y recomposiciones innecesarias.</p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl">
+                  <h4 class="font-bold text-amber-400 mb-1"><i class="fa-solid fa-circle-dot mr-1.5"></i>Breakpoints</h4>
+                  <p class="text-xs text-spotify-subtext">Puntos de interrupción condicionales que pausan el hilo de ejecución para inspeccionar y modificar el estado de variables paso a paso.</p>
+                </div>
+                <div class="bg-spotify-elevated p-4 rounded-xl sm:col-span-2">
+                  <h4 class="font-bold text-rose-400 mb-1"><i class="fa-solid fa-mobile-retro mr-1.5"></i>ADB (Android Debug Bridge)</h4>
+                  <p class="text-xs text-spotify-subtext">Herramienta de línea de comandos cliente-servidor para instalar paquetes, acceder a shell del dispositivo, simular eventos y extraer reportes de errores.</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Prácticas de Seguridad Móvil -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-white/5">
+              <h2 class="text-xl font-extrabold mb-4">Prácticas Esenciales de Seguridad Móvil (OWASP Mobile Top 10)</h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-spotify-subtext">
+                <div class="flex gap-3 items-start bg-black/40 p-4 rounded-xl">
+                  <i class="fa-solid fa-key text-spotify-green mt-1"></i>
+                  <div>
+                    <strong class="text-white block">Cifrado AES y Keystore / Keychain</strong>
+                    Proteger credenciales y bases de datos locales con cifrado AES-256 gestionando las claves criptográficas dentro del módulo de hardware seguro (<code class="text-emerald-300">Android Keystore</code> / <code class="text-emerald-300">iOS Keychain</code>).
+                  </div>
+                </div>
+                <div class="flex gap-3 items-start bg-black/40 p-4 rounded-xl">
+                  <i class="fa-solid fa-certificate text-spotify-green mt-1"></i>
+                  <div>
+                    <strong class="text-white block">HTTPS y Certificate Pinning</strong>
+                    Exigir conexiones TLS cifradas y fijar la huella del certificado del servidor en la app para neutralizar ataques <em>Man-in-the-Middle (MitM)</em>.
+                  </div>
+                </div>
+                <div class="flex gap-3 items-start bg-black/40 p-4 rounded-xl">
+                  <i class="fa-solid fa-eye-slash text-spotify-green mt-1"></i>
+                  <div>
+                    <strong class="text-white block">Ofuscación y Reducción con ProGuard / R8</strong>
+                    Renombra clases, métodos y atributos en el paquete de distribución (AAB/APK) para dificultar la ingeniería inversa del código fuente.
+                  </div>
+                </div>
+                <div class="flex gap-3 items-start bg-black/40 p-4 rounded-xl">
+                  <i class="fa-solid fa-shield-virus text-spotify-green mt-1"></i>
+                  <div>
+                    <strong class="text-white block">Cumplimiento OWASP Mobile Top 10</strong>
+                    Prevenir almacenamiento inseguro de datos (M9), autenticación débil (M3), validación insuficiente de entradas (M4) y uso de credenciales codificadas (M1).
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Referencias Bibliográficas y Documentales en Formato APA -->
+            <section class="bg-spotify-card rounded-2xl p-6 border border-spotify-green/20">
+              <h2 class="text-xl font-extrabold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-book-bookmark text-spotify-green"></i>
+                Referencias Bibliográficas y Documentales (Formato APA)
+              </h2>
+              <ul class="space-y-3 text-xs sm:text-sm text-spotify-subtext leading-relaxed">
+                <li class="p-3.5 rounded-xl bg-black/40 pl-6 -indent-3">
+                  Apple Inc. (2025). <em>Apple Developer Documentation: SwiftUI, CoreData, CoreMotion &amp; Security Framework</em>. Apple Developer. <a href="https://developer.apple.com/documentation/" target="_blank" rel="noopener noreferrer" class="text-spotify-green hover:underline">https://developer.apple.com/documentation/</a>
+                </li>
+                <li class="p-3.5 rounded-xl bg-black/40 pl-6 -indent-3">
+                  Chacon, S., &amp; Straub, B. (2014). <em>Pro Git</em> (2.ª ed.). Apress. <a href="https://git-scm.com/book/es/v2" target="_blank" rel="noopener noreferrer" class="text-spotify-green hover:underline">https://git-scm.com/book/es/v2</a>
+                </li>
+                <li class="p-3.5 rounded-xl bg-black/40 pl-6 -indent-3">
+                  Google Developers. (2025). <em>Guía para desarrolladores de Android: Arquitectura, Room, Sensores, Media3 y WorkManager</em>. Android Developers. <a href="https://developer.android.com/guide?hl=es-419" target="_blank" rel="noopener noreferrer" class="text-spotify-green hover:underline">https://developer.android.com/guide?hl=es-419</a>
+                </li>
+                <li class="p-3.5 rounded-xl bg-black/40 pl-6 -indent-3">
+                  OWASP Foundation. (2024). <em>OWASP Mobile Top 10 &amp; Mobile Application Security Verification Standard (MASVS)</em>. OWASP Mobile Security Project. <a href="https://mas.owasp.org/" target="_blank" rel="noopener noreferrer" class="text-spotify-green hover:underline">https://mas.owasp.org/</a>
+                </li>
+                <li class="p-3.5 rounded-xl bg-black/40 pl-6 -indent-3">
+                  Smyth, N. (2024). <em>Android Studio Development Essentials - Kotlin Edition</em>. Payload Media.
+                </li>
+              </ul>
+            </section>
+          </div>
+        `
+      }
+    ];
+
+    // =========================================================================
+    // ESTADO DE LA APLICACIÓN
+    // =========================================================================
+    let currentView = 'home';
+    let currentFilter = 'all';
+    let readTopics = JSON.parse(localStorage.getItem('devify_read_topics') || '[]');
+    let activeModalVideoUrl = TOPICS[0].youtubeUrl;
+
+    // =========================================================================
+    // INICIALIZACIÓN
+    // =========================================================================
+    function init() {
+      renderSidebar();
+      updateCompletedBadge();
+      navigateTo('home');
+
+      const mainScroll = document.getElementById('main-scroll');
+      mainScroll.addEventListener('scroll', updateReadingProgress);
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeVideoModal();
+      });
+      document.getElementById('video-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'video-modal') closeVideoModal();
+      });
+    }
+
+    // =========================================================================
+    // RENDERIZADO DE SIDEBAR (TU BIBLIOTECA)
+    // =========================================================================
+    function renderSidebar() {
+      const list = document.getElementById('sidebar-list');
+      const filtered = TOPICS.filter(t => currentFilter === 'all' || t.category === currentFilter);
+
+      list.innerHTML = filtered.map(topic => {
+        const isActive = currentView === topic.id;
+        const isRead = readTopics.includes(topic.id);
+
+        return `
+          <button 
+            onclick="navigateTo('${topic.id}')" 
+            class="w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-all group ${isActive ? 'bg-spotify-hover' : 'hover:bg-spotify-elevated'}"
+          >
+            <div class="w-11 h-11 rounded-lg bg-gradient-to-br ${topic.gradient} flex items-center justify-center text-white shrink-0 relative shadow">
+              <i class="fa-solid ${topic.icon} text-sm"></i>
+              ${isRead ? '<span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-spotify-green text-black text-[9px] flex items-center justify-center font-bold shadow"><i class="fa-solid fa-check"></i></span>' : ''}
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center justify-between gap-1">
+                <p class="text-sm font-bold truncate ${isActive ? 'text-spotify-green' : 'text-white group-hover:text-white'}">
+                  ${topic.number}. ${topic.title}
+                </p>
+                ${isActive ? `
+                  <div class="flex items-end gap-0.5 h-3.5 shrink-0">
+                    <span class="eq-bar"></span>
+                    <span class="eq-bar"></span>
+                    <span class="eq-bar"></span>
+                  </div>
+                ` : ''}
+              </div>
+              <p class="text-xs text-spotify-subtext truncate">${topic.categoryLabel} • ${topic.duration}</p>
+            </div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function filterSidebar(category, btn) {
+      currentFilter = category;
+      document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.classList.remove('bg-white', 'text-black');
+        chip.classList.add('bg-spotify-elevated', 'text-white');
+      });
+      btn.classList.remove('bg-spotify-elevated', 'text-white');
+      btn.classList.add('bg-white', 'text-black');
+      renderSidebar();
+    }
+
+    // =========================================================================
+    // NAVEGACIÓN ENTRE PÁGINAS / VISTAS
+    // =========================================================================
+    function navigateTo(viewId) {
+      currentView = viewId;
+      clearSearch(false);
+      toggleSidebar(false);
+
+      const container = document.getElementById('page-container');
+      const mainScroll = document.getElementById('main-scroll');
+      const navHome = document.getElementById('nav-home');
+      const markReadBtn = document.getElementById('mark-read-btn');
+      const breadcrumbEl = document.getElementById('breadcrumb-current');
+
+      if (viewId === 'home') {
+        navHome.classList.add('bg-spotify-hover', 'text-white');
+        navHome.classList.remove('text-spotify-subtext');
+        markReadBtn.classList.add('hidden');
+        if (breadcrumbEl) breadcrumbEl.textContent = 'Portada del Curso';
+        renderHomeView(container);
+        updatePlayerBar(null);
+      } else {
+        navHome.classList.remove('bg-spotify-hover', 'text-white');
+        navHome.classList.add('text-spotify-subtext');
+        const topic = TOPICS.find(t => t.id === viewId);
+        if (topic) {
+          markReadBtn.classList.remove('hidden');
+          if (breadcrumbEl) breadcrumbEl.textContent = `Módulo ${topic.number}: ${topic.title}`;
+          updateMarkReadButton(topic.id);
+          renderTopicView(container, topic);
+          updatePlayerBar(topic);
+        }
+      }
+
+      renderSidebar();
+      mainScroll.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(updateReadingProgress, 100);
+    }
+
+    // Vista de Portada estilo Playlist Principal de Spotify
+    function renderHomeView(container) {
+      container.innerHTML = `
+        <div class="fade-in">
+          <!-- Hero Banner -->
+          <div class="bg-gradient-to-b from-emerald-800/70 via-spotify-base/90 to-spotify-base px-4 sm:px-8 pt-6 pb-8">
+            <div class="flex flex-col md:flex-row items-start md:items-end gap-6">
+              <div class="w-36 h-36 sm:w-48 sm:h-48 rounded-2xl bg-gradient-to-br from-spotify-green via-emerald-600 to-teal-950 shadow-2xl flex flex-col items-center justify-center p-4 shrink-0 border border-white/10">
+                <i class="fa-solid fa-mobile-screen-button text-5xl sm:text-6xl text-black mb-2"></i>
+                <span class="text-black font-black text-xs uppercase tracking-widest">Edición 2026</span>
+              </div>
+              <div class="flex-1">
+                <span class="text-xs font-bold uppercase tracking-widest text-white/90 flex items-center gap-2">
+                  <i class="fa-solid fa-circle-check text-spotify-green"></i> Tutorial Interactivo Verificado
+                </span>
+                <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight mt-2 mb-3">
+                  Desarrollo Móvil &amp; Control de Versiones
+                </h1>
+                <p class="text-sm sm:text-base text-spotify-subtext max-w-2xl leading-relaxed">
+                  Explora los 7 módulos del curso organizados por páginas: Git, persistencia de datos, sensores, multimedia, servicios en segundo plano, toolkits y seguridad móvil. Cada tema incluye código copiable y videotutoriales en español.
+                </p>
+                <div class="flex flex-wrap items-center gap-3 mt-5">
+                  <button onclick="navigateTo('versiones')" class="bg-spotify-green hover:bg-spotify-greenHover hover:scale-105 active:scale-95 text-black font-extrabold px-7 py-3.5 rounded-full flex items-center gap-2.5 shadow-xl transition-all">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Comenzar Lectura</span>
+                  </button>
+                  <button onclick="openVideoModal('versiones')" class="bg-white/10 hover:bg-white/20 text-white font-bold px-5 py-3.5 rounded-full flex items-center gap-2 transition-colors text-sm">
+                    <i class="fa-brands fa-youtube text-[#FF0000] text-lg"></i>
+                    <span>Ver Clase Introductoria (Git)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid de Accesos Rápidos estilo "Hecho para ti" -->
+          <div class="px-4 sm:px-8 space-y-8">
+            <div>
+              <h2 class="text-xl sm:text-2xl font-extrabold mb-4">Módulos Destacados</h2>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                ${TOPICS.map(topic => {
+                  const isRead = readTopics.includes(topic.id);
+                  return `
+                    <div onclick="navigateTo('${topic.id}')" class="bg-spotify-card hover:bg-spotify-hover p-4 rounded-2xl transition-all duration-200 cursor-pointer group border border-white/5 flex flex-col justify-between relative">
+                      <div>
+                        <div class="w-full aspect-square max-h-40 rounded-xl bg-gradient-to-br ${topic.gradient} mb-4 flex items-center justify-center relative overflow-hidden shadow-lg">
+                          <i class="fa-solid ${topic.icon} text-5xl text-white/90 group-hover:scale-110 transition-transform duration-300"></i>
+                          <span class="absolute top-3 left-3 bg-black/50 backdrop-blur-xs text-white font-mono text-xs font-bold px-2.5 py-1 rounded-full">
+                            Módulo ${topic.number}
+                          </span>
+                          ${isRead ? '<span class="absolute top-3 right-3 bg-spotify-green text-black text-xs font-extrabold px-2.5 py-1 rounded-full shadow"><i class="fa-solid fa-check mr-1"></i>Leído</span>' : ''}
+                          <button class="w-12 h-12 rounded-full bg-spotify-green text-black flex items-center justify-center shadow-2xl absolute bottom-3 right-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
+                            <i class="fa-solid fa-play text-base ml-0.5"></i>
+                          </button>
+                        </div>
+                        <h3 class="font-extrabold text-base text-white group-hover:text-spotify-green transition-colors mb-1">${topic.title}</h3>
+                        <p class="text-xs text-spotify-subtext line-clamp-2 leading-relaxed">${topic.shortDesc}</p>
+                      </div>
+
+                      <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-spotify-subtext">
+                        <span>${topic.duration}</span>
+                        <a href="${topic.youtubeUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="text-white hover:text-[#FF0000] font-semibold flex items-center gap-1 transition-colors">
+                          <i class="fa-brands fa-youtube text-[#FF0000]"></i> YouTube
+                        </a>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Lista completa estilo Tracklist de Spotify -->
+            <div>
+              <h2 class="text-xl sm:text-2xl font-extrabold mb-4">Índice Completo del Temario</h2>
+              <div class="bg-spotify-card/60 rounded-2xl border border-white/5 overflow-hidden">
+                <div class="hidden sm:grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/10 text-xs font-bold uppercase text-spotify-subtext">
+                  <div class="col-span-1">#</div>
+                  <div class="col-span-5">Tema / Módulo</div>
+                  <div class="col-span-3">Categoría</div>
+                  <div class="col-span-3 text-right">Videotutorial Español</div>
+                </div>
+                <div class="divide-y divide-white/5">
+                  ${TOPICS.map(topic => {
+                    const isRead = readTopics.includes(topic.id);
+                    return `
+                      <div onclick="navigateTo('${topic.id}')" class="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 px-5 py-3.5 items-center hover:bg-spotify-hover cursor-pointer transition-colors group">
+                        <div class="hidden sm:block col-span-1 font-mono text-sm text-spotify-subtext group-hover:text-spotify-green font-bold">
+                          ${isRead ? '<i class="fa-solid fa-circle-check text-spotify-green"></i>' : topic.number}
+                        </div>
+                        <div class="col-span-1 sm:col-span-5 flex items-center gap-3">
+                          <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${topic.gradient} flex items-center justify-center text-white shrink-0">
+                            <i class="fa-solid ${topic.icon} text-sm"></i>
+                          </div>
+                          <div>
+                            <h4 class="font-bold text-sm text-white group-hover:text-spotify-green transition-colors">${topic.title}</h4>
+                            <p class="text-xs text-spotify-subtext sm:hidden">${topic.categoryLabel} • ${topic.duration}</p>
+                          </div>
+                        </div>
+                        <div class="hidden sm:block col-span-3">
+                          <span class="text-xs bg-spotify-elevated text-spotify-subtext px-2.5 py-1 rounded-full">${topic.categoryLabel}</span>
+                        </div>
+                        <div class="col-span-1 sm:col-span-3 flex items-center justify-between sm:justify-end gap-2">
+                          <button onclick="event.stopPropagation(); openVideoModal('${topic.id}')" title="Ver vídeo embebido aquí" class="inline-flex items-center gap-1.5 text-xs font-bold bg-spotify-green/20 hover:bg-spotify-green text-spotify-green hover:text-black px-3 py-1.5 rounded-full transition-colors">
+                            <i class="fa-solid fa-play text-[10px]"></i>
+                            <span>Reproducir</span>
+                          </button>
+                          <a href="${topic.youtubeUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir directamente en YouTube" class="inline-flex items-center gap-1.5 text-xs font-bold bg-black/50 hover:bg-[#FF0000] text-white px-3 py-1.5 rounded-full transition-colors border border-white/10">
+                            <i class="fa-brands fa-youtube text-[#FF0000] group-hover:text-white"></i>
+                            <span>YouTube</span>
+                          </a>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Vista Individual de cada Módulo con su Tarjeta Multimedia de YouTube y Enlace Directo
+    function renderTopicView(container, topic) {
+      const idx = TOPICS.findIndex(t => t.id === topic.id);
+      const prev = idx > 0 ? TOPICS[idx - 1] : null;
+      const next = idx < TOPICS.length - 1 ? TOPICS[idx + 1] : null;
+      const thumbUrl = `https://i.ytimg.com/vi/${topic.videoId}/hqdefault.jpg`;
+
+      container.innerHTML = `
+        <div class="fade-in">
+          <!-- Cabecera estilo Álbum / Episodio Spotify -->
+          <div class="bg-gradient-to-b ${topic.gradient} px-4 sm:px-8 pt-6 pb-8">
+            <div class="flex flex-col md:flex-row items-start md:items-end gap-6">
+              <div class="w-28 h-28 sm:w-40 sm:h-40 rounded-2xl bg-black/30 backdrop-blur-md border border-white/15 flex flex-col items-center justify-center shrink-0 shadow-2xl">
+                <i class="fa-solid ${topic.icon} text-4xl sm:text-5xl text-white mb-2"></i>
+                <span class="font-mono text-xs font-bold text-white/80">MÓDULO ${topic.number}</span>
+              </div>
+
+              <div class="flex-1">
+                <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/90">
+                  <span>${topic.categoryLabel}</span>
+                  <span>•</span>
+                  <span>${topic.duration}</span>
+                </div>
+                <h1 class="text-3xl sm:text-5xl font-black tracking-tight mt-1.5 mb-3">${topic.title}</h1>
+                <p class="text-sm sm:text-base text-white/85 max-w-3xl mb-5">${topic.shortDesc}</p>
+
+                <!-- Botones Principales de Acción -->
+                <div class="flex flex-wrap items-center gap-3">
+                  <button onclick="openVideoModal('${topic.id}')" class="bg-spotify-green hover:bg-spotify-greenHover hover:scale-105 active:scale-95 text-black font-extrabold px-6 py-3 rounded-full inline-flex items-center gap-2.5 shadow-xl transition-all text-sm">
+                    <i class="fa-solid fa-play text-sm"></i>
+                    <span>Reproducir Videotutorial</span>
+                  </button>
+
+                  <a href="${topic.youtubeUrl}" target="_blank" rel="noopener noreferrer" class="bg-black/50 hover:bg-[#FF0000] text-white font-bold px-5 py-3 rounded-full inline-flex items-center gap-2 text-xs sm:text-sm border border-white/20 transition-colors">
+                    <i class="fa-brands fa-youtube text-base"></i>
+                    <span>Abrir directamente en YouTube</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[11px]"></i>
+                  </a>
+
+                  <button onclick="toggleReadCurrent()" id="inline-read-btn" class="bg-black/40 hover:bg-black/60 text-white font-bold px-4 py-3 rounded-full text-xs border border-white/20 transition-colors">
+                    ${readTopics.includes(topic.id) ? '<i class="fa-solid fa-circle-check text-spotify-green mr-1.5"></i> Tema Completado' : '<i class="fa-regular fa-circle-check mr-1.5"></i> Marcar como leído'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cuerpo educativo del módulo -->
+          <div class="px-4 sm:px-8 mt-4">
+            <!-- TARJETA MULTIMEDIA ESTILO SPOTIFY CON MINIATURA REAL Y ACCESO GARANTIZADO -->
+            <div class="mb-8 bg-spotify-card hover:bg-spotify-elevated/90 transition-colors rounded-2xl p-4 sm:p-5 border border-white/10 flex flex-col md:flex-row items-center gap-5 shadow-lg">
+              <!-- Miniatura real de YouTube -->
+              <div onclick="openVideoModal('${topic.id}')" class="relative w-full md:w-64 aspect-video rounded-xl overflow-hidden bg-black shrink-0 cursor-pointer group border border-white/10">
+                <img 
+                  src="${thumbUrl}" 
+                  alt="${topic.youtubeTitle}" 
+                  onerror="this.src='https://placehold.co/480x360/181818/1DB954?text=Video+YouTube+Espa%C3%B1ol'"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90 group-hover:opacity-100"
+                />
+                <div class="absolute inset-0 bg-black/35 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <div class="w-12 h-12 rounded-full bg-spotify-green text-black flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-play text-lg ml-0.5"></i>
+                  </div>
+                </div>
+                <span class="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-2 py-0.5 rounded">ESPAÑOL</span>
+              </div>
+
+              <!-- Información y enlaces del video -->
+              <div class="flex-1 min-w-0 w-full">
+                <div class="flex items-center gap-2 text-xs font-bold text-spotify-green uppercase tracking-wider mb-1">
+                  <i class="fa-brands fa-youtube text-[#FF0000] text-sm"></i>
+                  <span>Videotutorial en Español • Módulo ${topic.number}</span>
+                </div>
+                <h3 class="text-base sm:text-lg font-extrabold text-white leading-snug mb-1">${topic.youtubeTitle}</h3>
+                <p class="text-xs text-spotify-subtext mb-4">Canal: <strong class="text-white">${topic.youtubeChannel}</strong></p>
+
+                <div class="flex flex-wrap items-center gap-2.5">
+                  <button onclick="openVideoModal('${topic.id}')" class="bg-spotify-green hover:bg-spotify-greenHover text-black font-extrabold px-4 py-2 rounded-full text-xs inline-flex items-center gap-2 transition-transform hover:scale-105">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Ver aquí en reproductor</span>
+                  </button>
+                  <a href="${topic.youtubeUrl}" target="_blank" rel="noopener noreferrer" class="bg-spotify-elevated hover:bg-[#FF0000] text-white font-bold px-4 py-2 rounded-full text-xs inline-flex items-center gap-2 border border-white/10 transition-colors">
+                    <i class="fa-brands fa-youtube"></i>
+                    <span>Abrir directamente en YouTube</span>
+                  </a>
+                  <button onclick="copyTextValue('${topic.youtubeUrl}', 'Enlace de YouTube copiado')" class="bg-black/40 hover:bg-white/15 text-spotify-subtext hover:text-white font-bold px-3.5 py-2 rounded-full text-xs inline-flex items-center gap-1.5 border border-white/10 transition-colors">
+                    <i class="fa-regular fa-copy"></i>
+                    <span>Copiar enlace</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            ${topic.render()}
+
+            <!-- Tarjeta final de refuerzo audiovisual en YouTube -->
+            <div class="mt-8 bg-gradient-to-r from-spotify-card to-spotify-elevated rounded-2xl p-6 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-[#FF0000]/20 text-[#FF0000] flex items-center justify-center shrink-0">
+                  <i class="fa-brands fa-youtube text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="font-extrabold text-base">${topic.youtubeTitle}</h4>
+                  <p class="text-xs sm:text-sm text-spotify-subtext">Canal: <strong>${topic.youtubeChannel}</strong> • Recurso audiovisual recomendado en español.</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                <button onclick="openVideoModal('${topic.id}')" class="flex-1 sm:flex-initial text-center bg-spotify-green hover:bg-spotify-greenHover text-black font-extrabold px-4 py-2.5 rounded-full text-xs transition-colors">
+                  Ver aquí
+                </button>
+                <a href="${topic.youtubeUrl}" target="_blank" rel="noopener noreferrer" class="flex-1 sm:flex-initial text-center bg-white hover:bg-neutral-200 text-black font-extrabold px-4 py-2.5 rounded-full text-xs transition-colors">
+                  Abrir en YouTube
+                </a>
+              </div>
+            </div>
+
+            <!-- Navegación Inferior entre Páginas (Anterior / Siguiente) -->
+            <div class="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+              ${prev ? `
+                <button onclick="navigateTo('${prev.id}')" class="flex items-center gap-3 p-4 rounded-xl bg-spotify-card hover:bg-spotify-hover text-left transition-colors border border-white/5">
+                  <i class="fa-solid fa-arrow-left text-spotify-green"></i>
+                  <div>
+                    <span class="text-[11px] uppercase text-spotify-subtext block">Tema Anterior</span>
+                    <span class="font-bold text-sm">${prev.number}. ${prev.title}</span>
+                  </div>
+                </button>
+              ` : `
+                <button onclick="navigateTo('home')" class="flex items-center gap-3 p-4 rounded-xl bg-spotify-card hover:bg-spotify-hover text-left transition-colors border border-white/5">
+                  <i class="fa-solid fa-house text-spotify-green"></i>
+                  <div>
+                    <span class="text-[11px] uppercase text-spotify-subtext block">Volver a</span>
+                    <span class="font-bold text-sm">Inicio / Portada del Curso</span>
+                  </div>
+                </button>
+              `}
+
+              ${next ? `
+                <button onclick="navigateTo('${next.id}')" class="flex items-center justify-end gap-3 p-4 rounded-xl bg-spotify-card hover:bg-spotify-hover text-right transition-colors border border-white/5">
+                  <div>
+                    <span class="text-[11px] uppercase text-spotify-subtext block">Siguiente Tema</span>
+                    <span class="font-bold text-sm">${next.number}. ${next.title}</span>
+                  </div>
+                  <i class="fa-solid fa-arrow-right text-spotify-green"></i>
+                </button>
+              ` : `
+                <button onclick="navigateTo('home')" class="flex items-center justify-end gap-3 p-4 rounded-xl bg-spotify-green text-black text-right transition-transform hover:scale-[1.02]">
+                  <div>
+                    <span class="text-[11px] uppercase font-bold opacity-80 block">¡Curso Finalizado!</span>
+                    <span class="font-extrabold text-sm">Volver al Resumen General</span>
+                  </div>
+                  <i class="fa-solid fa-trophy"></i>
+                </button>
+              `}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // CONTROLES DEL MODAL DE VIDEO Y REPRODUCTOR INFERIOR
+    // =========================================================================
+    function openVideoModal(topicId) {
+      const topic = TOPICS.find(t => t.id === topicId) || TOPICS[0];
+      const modal = document.getElementById('video-modal');
+      const iframe = document.getElementById('youtube-iframe');
+      const titleEl = document.getElementById('modal-video-title');
+      const channelEl = document.getElementById('modal-video-channel');
+      const directLink = document.getElementById('modal-direct-youtube');
+
+      activeModalVideoUrl = topic.youtubeUrl;
+      titleEl.textContent = `${topic.number}. ${topic.youtubeTitle}`;
+      channelEl.textContent = `Canal: ${topic.youtubeChannel} • Módulo: ${topic.title}`;
+      directLink.href = topic.youtubeUrl;
+      iframe.src = `https://www.youtube-nocookie.com/embed/${topic.videoId}?autoplay=1&rel=0`;
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeVideoModal() {
+      const modal = document.getElementById('video-modal');
+      const iframe = document.getElementById('youtube-iframe');
+      iframe.src = '';
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function openCurrentTopicVideo() {
+      const targetId = currentView === 'home' ? 'versiones' : currentView;
+      openVideoModal(targetId);
+    }
+
+    function copyCurrentVideoUrl() {
+      copyTextValue(activeModalVideoUrl, 'Enlace de YouTube copiado al portapapeles');
+    }
+
+    function updatePlayerBar(topic) {
+      const titleEl = document.getElementById('player-title');
+      const subEl = document.getElementById('player-subtitle');
+      const coverEl = document.getElementById('player-cover');
+      const ytBtn = document.getElementById('player-youtube-btn');
+
+      if (!topic) {
+        titleEl.textContent = 'Portada del Tutorial';
+        subEl.textContent = '7 módulos disponibles • Desarrollo Móvil';
+        coverEl.className = 'w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-900 flex items-center justify-center text-white shrink-0 shadow-md';
+        coverEl.innerHTML = '<i class="fa-solid fa-graduation-cap text-xl"></i>';
+        ytBtn.href = TOPICS[0].youtubeUrl;
+      } else {
+        titleEl.textContent = `${topic.number}. ${topic.title}`;
+        subEl.textContent = `${topic.categoryLabel} • ${topic.duration}`;
+        coverEl.className = `w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-gradient-to-br ${topic.gradient} flex items-center justify-center text-white shrink-0 shadow-md`;
+        coverEl.innerHTML = `<i class="fa-solid ${topic.icon} text-xl"></i>`;
+        ytBtn.href = topic.youtubeUrl;
+      }
+    }
+
+    function updateReadingProgress() {
+      const mainScroll = document.getElementById('main-scroll');
+      const scrollTop = mainScroll.scrollTop;
+      const scrollHeight = mainScroll.scrollHeight - mainScroll.clientHeight;
+      const percent = scrollHeight > 0 ? Math.min(100, Math.round((scrollTop / scrollHeight) * 100)) : 100;
+
+      document.getElementById('read-percent').textContent = `${percent}%`;
+      document.getElementById('read-progress-bar').style.width = `${percent}%`;
+
+      if (percent >= 90 && currentView !== 'home' && !readTopics.includes(currentView)) {
+        markTopicAsRead(currentView, true);
+      }
+    }
+
+    function seekScroll(event) {
+      const bar = event.currentTarget;
+      const rect = bar.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+      const mainScroll = document.getElementById('main-scroll');
+      const targetScroll = ratio * (mainScroll.scrollHeight - mainScroll.clientHeight);
+      mainScroll.scrollTo({ top: targetScroll, behavior: 'smooth' });
+    }
+
+    function toggleAutoScroll() {
+      const mainScroll = document.getElementById('main-scroll');
+      if (mainScroll.scrollTop > 100) {
+        mainScroll.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        mainScroll.scrollBy({ top: 350, behavior: 'smooth' });
+      }
+    }
+
+    function prevTopic() {
+      if (currentView === 'home') return;
+      const idx = TOPICS.findIndex(t => t.id === currentView);
+      if (idx > 0) navigateTo(TOPICS[idx - 1].id);
+      else navigateTo('home');
+    }
+
+    function nextTopic() {
+      if (currentView === 'home') {
+        navigateTo(TOPICS[0].id);
+        return;
+      }
+      const idx = TOPICS.findIndex(t => t.id === currentView);
+      if (idx < TOPICS.length - 1) navigateTo(TOPICS[idx + 1].id);
+      else navigateTo('home');
+    }
+
+    // =========================================================================
+    // ESTADO DE PROGRESO (MARCAR MÓDULOS LEÍDOS)
+    // =========================================================================
+    function toggleReadCurrent() {
+      if (currentView === 'home') return;
+      const exists = readTopics.includes(currentView);
+      if (exists) {
+        readTopics = readTopics.filter(id => id !== currentView);
+        showToast('Módulo desmarcado');
+      } else {
+        readTopics.push(currentView);
+        showToast('¡Módulo marcado como completado!');
+      }
+      localStorage.setItem('devify_read_topics', JSON.stringify(readTopics));
+      updateCompletedBadge();
+      updateMarkReadButton(currentView);
+      renderSidebar();
+    }
+
+    function markTopicAsRead(id, silent = false) {
+      if (!readTopics.includes(id)) {
+        readTopics.push(id);
+        localStorage.setItem('devify_read_topics', JSON.stringify(readTopics));
+        updateCompletedBadge();
+        updateMarkReadButton(id);
+        renderSidebar();
+        if (!silent) showToast('¡Módulo completado!');
+      }
+    }
+
+    function updateCompletedBadge() {
+      document.getElementById('completed-badge').textContent = `${readTopics.length} / ${TOPICS.length} leídos`;
+    }
+
+    function updateMarkReadButton(id) {
+      const isRead = readTopics.includes(id);
+      const topBtn = document.getElementById('mark-read-btn');
+      const inlineBtn = document.getElementById('inline-read-btn');
+
+      if (topBtn) {
+        topBtn.innerHTML = isRead
+          ? '<i class="fa-solid fa-circle-check text-spotify-green"></i><span>Leído</span>'
+          : '<i class="fa-regular fa-circle-check"></i><span>Marcar leído</span>';
+      }
+      if (inlineBtn) {
+        inlineBtn.innerHTML = isRead
+          ? '<i class="fa-solid fa-circle-check text-spotify-green mr-1.5"></i> Tema Completado'
+          : '<i class="fa-regular fa-circle-check mr-1.5"></i> Marcar como leído';
+      }
+    }
+
+    // =========================================================================
+    // BUSCADOR INSTANTÁNEO
+    // =========================================================================
+    function focusSearch() {
+      toggleSidebar(false);
+      document.getElementById('global-search').focus();
+    }
+
+    function handleSearch(query) {
+      const q = query.trim().toLowerCase();
+      const clearBtn = document.getElementById('clear-search');
+      const resultsPanel = document.getElementById('search-results-panel');
+      const pageContainer = document.getElementById('page-container');
+      const grid = document.getElementById('search-results-grid');
+
+      if (!q) {
+        clearBtn.classList.add('hidden');
+        resultsPanel.classList.add('hidden');
+        pageContainer.classList.remove('hidden');
+        return;
+      }
+
+      clearBtn.classList.remove('hidden');
+      resultsPanel.classList.remove('hidden');
+      pageContainer.classList.add('hidden');
+
+      const matches = TOPICS.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        t.shortDesc.toLowerCase().includes(q) ||
+        t.keywords.some(k => k.includes(q))
+      );
+
+      if (matches.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full bg-spotify-card rounded-2xl p-8 text-center border border-white/5">
+            <i class="fa-solid fa-magnifying-glass text-3xl text-spotify-subtext mb-3"></i>
+            <h3 class="font-bold text-lg">No se encontraron temas para "${query}"</h3>
+            <p class="text-sm text-spotify-subtext mt-1">Prueba con términos como Git, SQLite, Room, Sensores, Audio, WorkManager, Flutter o Logcat.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = matches.map(t => `
+        <div onclick="navigateTo('${t.id}')" class="bg-spotify-card hover:bg-spotify-hover p-5 rounded-2xl border border-white/5 cursor-pointer transition-all flex items-start gap-4">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br ${t.gradient} flex items-center justify-center text-white shrink-0">
+            <i class="fa-solid ${t.icon} text-lg"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <span class="text-[11px] font-bold uppercase text-spotify-green">Módulo ${t.number} • ${t.categoryLabel}</span>
+            <h3 class="font-extrabold text-lg text-white truncate">${t.title}</h3>
+            <p class="text-xs text-spotify-subtext mt-1 line-clamp-2">${t.shortDesc}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function clearSearch(resetInput = true) {
+      if (resetInput) document.getElementById('global-search').value = '';
+      document.getElementById('clear-search').classList.add('hidden');
+      document.getElementById('search-results-panel').classList.add('hidden');
+      document.getElementById('page-container').classList.remove('hidden');
+    }
+
+    // =========================================================================
+    // UTILIDADES UI (SIDEBAR MÓVIL, COPIAR CÓDIGO Y TOASTS)
+    // =========================================================================
+    function toggleSidebar(open) {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('mobile-overlay');
+      if (open) {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+      }
+    }
+
+    function copyCode(elementId) {
+      const codeEl = document.getElementById(elementId);
+      if (!codeEl) return;
+      copyTextValue(codeEl.innerText, 'Código copiado al portapapeles');
+    }
+
+    function copyTextValue(text, message) {
+      const tempInput = document.createElement('textarea');
+      tempInput.value = text;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      showToast(message);
+    }
+
+    let toastTimeout;
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const msgEl = document.getElementById('toast-msg');
+      msgEl.textContent = message;
+      toast.classList.remove('hidden');
+      toast.classList.add('flex');
+
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('hidden');
+        toast.classList.remove('flex');
+      }, 2600);
+    }
+
+    // Iniciar aplicación al cargar
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
